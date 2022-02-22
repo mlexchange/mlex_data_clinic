@@ -9,6 +9,9 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from model import Autoencoder, TrainingParameters
 from helper_utils import get_dataloaders
 
+SEED = 42
+NUM_WORKERS = 0
+
 if __name__ == 'main':
     parser = argparse.ArgumentParser()
     parser.add_argument('input_dir', help='input directory')
@@ -17,20 +20,29 @@ if __name__ == 'main':
     args = parser.parse_args()
     train_parameters = TrainingParameters(**json.loads(args.parameters))
 
-    pl.seed_everything(train_parameters.seed)   # Setting the seed
+    try:
+        seed = train_parameters.seed    # Setting the user-defined seed
+    except Exception as err:
+        seed = SEED                     # Setting the pre-defined seed
+    pl.seed_everything(seed)
+    print("Seed: ", seed)
+
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
     print("Device:", device)
 
+    train_loader, (width, height) = get_dataloaders(args.input_dir,
+                                                    train_parameters.batch_size,
+                                                    train_parameters.shuffle,
+                                                    NUM_WORKERS,
+                                                    'train')
+
+    val_loader = []
     if train_parameters.validation_ok:
-        train_loader, val_loader = get_dataloaders(args.input_dir,
-                                                   train_parameters.batch_size,
-                                                   train_parameters.shuffle,
-                                                   train_parameters.validation_ok)
-    else:
-        train_loader = get_dataloaders(args.input_dir,
-                                       train_parameters.batch_size,
-                                       train_parameters.shuffle,
-                                       train_parameters.validation_ok)
+        val_loader, (temp_w, temp_h) = get_dataloaders(args.input_dir,
+                                                       train_parameters.batch_size,
+                                                       train_parameters.shuffle,
+                                                       NUM_WORKERS,
+                                                       'val')
 
     trainer = pl.Trainer(default_root_dir=os.path.join(args.outut_dir, f"model_{train_parameters.latent_dim}"),
                          gpus=1 if str(device).startswith("cuda") else 0,
@@ -42,8 +54,8 @@ if __name__ == 'main':
 
     model = Autoencoder(base_channel_size=train_parameters.base_channel_size,
                         latent_dim=train_parameters.latent_dim,
-                        width=32,
-                        height=32)
+                        width=width,
+                        height=height)
 
     trainer.fit(model, train_loader, val_loader)
     # Test best model on validation set

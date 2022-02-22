@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Optional
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -6,11 +7,12 @@ import pytorch_lightning as pl
 
 
 class TrainingParameters(BaseModel):
-    latent_dim
-    num_epochs
-    base_channel_size
-    seed
-    validation_ok Bool
+    latent_dim: int = Field(description='latent space dimension')
+    batch_size: int = Field(description= 'batch size')
+    num_epochs: int = Field(description='number of epochs')
+    base_channel_size: int = Field(description='number of base channels')
+    validation_ok: bool = Field(description='include validation')
+    seed: Optional[int] = Field(description='random seed')
 
 
 class Encoder(nn.Module):
@@ -18,16 +20,19 @@ class Encoder(nn.Module):
                  num_input_channels: int,
                  base_channel_size: int,
                  latent_dim: int,
+                 flatten_dim: int,
                  act_fn: object = nn.GELU):
         """
         Inputs:
             - num_input_channels : Number of input channels of the image. For CIFAR, this parameter is 3
             - base_channel_size : Number of channels we use in the first convolutional layers. Deeper layers might use a duplicate of it.
             - latent_dim : Dimensionality of latent representation z
+            - flatten_dim: Dimensionality of the flatten input image
             - act_fn : Activation function used throughout the encoder network
         """
         super().__init__()
         c_hid = base_channel_size
+        linear_dim = int(flatten_dim / 64)
         self.net = nn.Sequential(
             nn.Conv2d(num_input_channels, c_hid, kernel_size=3, padding=1, stride=2),  # 32x32 => 16x16
             act_fn(),
@@ -40,7 +45,7 @@ class Encoder(nn.Module):
             nn.Conv2d(2 * c_hid, 2 * c_hid, kernel_size=3, padding=1, stride=2),  # 8x8 => 4x4
             act_fn(),
             nn.Flatten(),  # Image grid to single feature vector
-            nn.Linear(2 * 16 * c_hid, latent_dim)
+            nn.Linear(2 * linear_dim * c_hid, latent_dim)
         )
 
     def forward(self, x):
@@ -52,18 +57,21 @@ class Decoder(nn.Module):
                  num_input_channels: int,
                  base_channel_size: int,
                  latent_dim: int,
+                 flatten_dim: int,
                  act_fn: object = nn.GELU):
         """
         Inputs:
             - num_input_channels : Number of channels of the image to reconstruct. For CIFAR, this parameter is 3
             - base_channel_size : Number of channels we use in the last convolutional layers. Early layers might use a duplicate of it.
             - latent_dim : Dimensionality of latent representation z
+            - flatten_dim: Dimensionality of the flatten input image
             - act_fn : Activation function used throughout the decoder network
         """
         super().__init__()
         c_hid = base_channel_size
+        linear_dim = int(flatten_dim / 64)
         self.linear = nn.Sequential(
-            nn.Linear(latent_dim, 2 * 16 * c_hid),
+            nn.Linear(latent_dim, 2 * linear_dim * c_hid),
             act_fn()
         )
         self.net = nn.Sequential(
@@ -99,8 +107,8 @@ class Autoencoder(pl.LightningModule):
         # Saving hyperparameters of autoencoder
         self.save_hyperparameters()
         # Creating encoder and decoder
-        self.encoder = encoder_class(num_input_channels, base_channel_size, latent_dim)
-        self.decoder = decoder_class(num_input_channels, base_channel_size, latent_dim)
+        self.encoder = encoder_class(num_input_channels, base_channel_size, width*height, latent_dim)
+        self.decoder = decoder_class(num_input_channels, base_channel_size, width*height, latent_dim)
         # Example input array needed for visualizing the graph of the network
         self.example_input_array = torch.zeros(2, num_input_channels, width, height)
 
