@@ -12,7 +12,7 @@ from helper_utils import get_dataloaders
 SEED = 42
 NUM_WORKERS = 0
 
-if __name__ == 'main':
+if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('input_dir', help='input directory')
     parser.add_argument('output_dir', help='output directory')

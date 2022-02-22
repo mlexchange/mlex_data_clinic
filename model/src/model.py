@@ -8,6 +8,7 @@ import pytorch_lightning as pl
 
 class TrainingParameters(BaseModel):
     latent_dim: int = Field(description='latent space dimension')
+    shuffle: bool = Field(description='shuffle data')
     batch_size: int = Field(description= 'batch size')
     num_epochs: int = Field(description='number of epochs')
     base_channel_size: int = Field(description='number of base channels')

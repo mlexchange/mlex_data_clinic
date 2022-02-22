@@ -20,10 +20,10 @@ build_docker:
 	docker build -t ${IMG_WEB_SVC} -f ./docker/Dockerfile .
 
 run_docker:
-	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it -v ${PWD}:/app/work/ -v /Users/tanchavez/Documents/Dataset/X-Ray~scattering:/app/work/data -p 8888:8888 ${IMG_WEB_SVC}
+	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it --gpus all -v ${PWD}:/app/work/ -v /data/tanchavez/Datasets/scattering:/app/work/data -p 8888:8888 ${IMG_WEB_SVC}
 
 train_example:
-	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it --gpus all -v /Users/tanchavez/Documents/Dataset/X-Ray~scattering:/app/work/data ${IMG_WEB_SVC} python3 src/train_model.py data/mixed_small_32x32.npz data/out '{"latent_dim": 10, "batch_size": 32, "num_epochs": 1, "base_channel_size": 32, "validation_ok": false}' 
+	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it --gpus all -v /data/tanchavez/Datasets/scattering:/app/work/data ${IMG_WEB_SVC} python3 src/train_model.py data/mixed_small_32x32.npz data/out '{"latent_dim": 10, "shuffle": true, "batch_size": 32, "num_epochs": 1, "base_channel_size": 32, "validation_ok": false}' 
 
 evaluate_example:
 	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it --gpus all -v /data/tanchavez/Datasets/born:/app/work/data ${IMG_WEB_SVC} python3 src/evaluate_model.py data/test data/logs/model.h5 '{"rotation_angle": 0, "image_flip": "None", "batch_size": 1}'
