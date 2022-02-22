@@ -20,7 +20,7 @@ def get_dataloaders(data_path, batch_size, shuffle, num_workers, set):
         PyTorch DataLoaders
     '''
     data_type = os.path.splitext(data_path)[-1]
-    if data_type == '.npy':
+    if data_type == '.npz':
         # read from numpy array
         with np.load(data_path, mmap_mode=None, allow_pickle=False, fix_imports=True, encoding='ASCII') as file:
             data = np.array(file[set])

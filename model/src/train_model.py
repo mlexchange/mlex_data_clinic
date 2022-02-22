@@ -34,7 +34,7 @@ if __name__ == '__main__':
                                                     train_parameters.batch_size,
                                                     train_parameters.shuffle,
                                                     NUM_WORKERS,
-                                                    'train')
+                                                    'x_train')
 
     val_loader = []
     if train_parameters.validation_ok:
@@ -42,9 +42,9 @@ if __name__ == '__main__':
                                                        train_parameters.batch_size,
                                                        train_parameters.shuffle,
                                                        NUM_WORKERS,
-                                                       'val')
+                                                       'x_val')
 
-    trainer = pl.Trainer(default_root_dir=os.path.join(args.outut_dir, f"model_{train_parameters.latent_dim}"),
+    trainer = pl.Trainer(default_root_dir=os.path.join(args.output_dir, f"model_{train_parameters.latent_dim}"),
                          gpus=1 if str(device).startswith("cuda") else 0,
                          max_epochs=train_parameters.num_epochs,
                          callbacks=[ModelCheckpoint(save_weights_only=True),
