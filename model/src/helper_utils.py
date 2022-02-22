@@ -27,8 +27,8 @@ def get_dataloaders(data_path, batch_size, shuffle, num_workers, set):
         # check if grayscale
         if len(data.shape) == 2:
             data = data[:, np.newaxis]
-        if data.shape[-1] == 1:
-            data = np.squeeze(np.stack((data,) * 3, axis=3))
+        # if data.shape[-1] == 1:
+        #     data = np.squeeze(np.stack((data,) * 3, axis=3))
         dataset = torch.tensor(data)
         dataset = dataset.transpose(1, 3)
         (width, height) = dataset.shape[2:4]
