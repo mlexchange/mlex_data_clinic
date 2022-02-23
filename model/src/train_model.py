@@ -1,19 +1,17 @@
 import argparse
 import os
 import json
-import logging
 
 import torch
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
-from model import Autoencoder, TrainingParameters, TrainCustomCallback
+from model import Autoencoder, TrainingParameters
 from helper_utils import get_dataloaders
 
-SEED = 42
-NUM_WORKERS = 0
-
 if __name__ == '__main__':
+    SEED = 42
+    NUM_WORKERS = 0
+
     parser = argparse.ArgumentParser()
     parser.add_argument('input_dir', help='input directory')
     parser.add_argument('output_dir', help='output directory')
@@ -48,8 +46,7 @@ if __name__ == '__main__':
     trainer = pl.Trainer(default_root_dir=os.path.join(args.output_dir, f"model_{train_parameters.latent_dim}"),
                          gpus=1 if str(device).startswith("cuda") else 0,
                          max_epochs=train_parameters.num_epochs,
-                         progress_bar_refresh_rate=0,   #disable progress bar
-                         callbacks=[TrainCustomCallback()])
+                         progress_bar_refresh_rate=0)   #disable progress bar
     trainer.logger._log_graph = False           # If True, we plot the computation graph in tensorboard
     trainer.logger._default_hp_metric = None    # Optional logging argument that we don't need
 

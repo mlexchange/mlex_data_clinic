@@ -3,7 +3,6 @@ from typing import Optional
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from pytorch_lightning.callbacks import Callback
 import pytorch_lightning as pl
 
 
@@ -166,16 +165,15 @@ class Autoencoder(pl.LightningModule):
 
     def on_train_epoch_end(self):
         current_epoch = self.current_epoch
-        num_batches = self.num_training_batches
+        num_batches = self.trainer.num_training_batches
         print('\n', current_epoch, ' ', self.train_loss / num_batches, end = '', flush=True)
 
     def on_validation_epoch_end(self):
-        num_batches = self.num_val_batches # may be a list[int]
-        print(' ', self.validation_loss / num_batches, flush=True)
+        num_batches = self.trainer.num_val_batches # may be a list[int]
+        print(' ', self.validation_loss / num_batches, end = '', flush=True)
 
-    @staticmethod
     def on_train_end(self):
-        print('Train process completed', flush=True)
+        print('\nTrain process completed', flush=True)
 
     # def on_test_epoch_end(self):
     #     num_batches = self.num_test_batches # may be a list[int]
