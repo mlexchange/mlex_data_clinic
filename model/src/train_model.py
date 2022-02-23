@@ -47,7 +47,7 @@ if __name__ == '__main__':
     trainer = pl.Trainer(default_root_dir=os.path.join(args.output_dir, f"model_{train_parameters.latent_dim}"),
                          gpus=1 if str(device).startswith("cuda") else 0,
                          max_epochs=train_parameters.num_epochs,
-                         callbacks=[TrainCustomCallback])
+                         callbacks=[TrainCustomCallback()])
     trainer.logger._log_graph = False           # If True, we plot the computation graph in tensorboard
     trainer.logger._default_hp_metric = None    # Optional logging argument that we don't need
 

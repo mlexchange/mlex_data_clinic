@@ -1,10 +1,9 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-import pytorch_lightning as pl
 import torch
 import torch.optim as optim
 import torch.nn as nn
-import pytorch_lightning as pl
+from pytorch_lightning.callbacks import Callback
 
 
 class TrainingParameters(BaseModel):
@@ -161,7 +160,7 @@ class Autoencoder(pl.LightningModule):
         self.log('test_loss', loss)
 
 
-class TrainCustomCallback(pl.callbacks):
+class TrainCustomCallback(Callback):
     def on_validation_epoch_end(self, trainer, pl_module):
         logs = pl_module.log
         epoch = trainer.current_epoch
@@ -178,5 +177,5 @@ class TrainCustomCallback(pl.callbacks):
             loss = logs.get('loss')
             print(str(epoch) + ' ' + str(loss) + '\n', flush=True)
 
-    def on_train_end(self, logs=None):
+    def on_train_end(self):
         print('Train process completed', flush=True)
