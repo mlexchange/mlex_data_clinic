@@ -163,7 +163,7 @@ class Autoencoder(pl.LightningModule):
         self.log('test_loss', loss, on_epoch=True)
 
     def on_epoch_end(self):
-        print('loss', self.loss)
+        print('loss', float(self.loss))
 
 
 class TrainCustomCallback(Callback):
