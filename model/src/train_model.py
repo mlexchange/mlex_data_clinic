@@ -1,6 +1,7 @@
 import argparse
 import os
 import json
+import logging
 
 import torch
 import pytorch_lightning as pl
@@ -57,6 +58,6 @@ if __name__ == '__main__':
                         width=width,
                         height=height)
 
-    trainer.fit(model, train_loader, val_loader, verbose=False)
+    trainer.fit(model, train_loader, val_loader) #, verbose=False)
     # # Test best model on validation set
     # val_result = trainer.test(model, test_dataloaders=val_loader, verbose=False)
