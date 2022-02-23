@@ -6,7 +6,7 @@ import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
-from model import Autoencoder, TrainingParameters
+from model import Autoencoder, TrainingParameters, TrainCustomCallback
 from helper_utils import get_dataloaders
 
 SEED = 42
@@ -47,8 +47,7 @@ if __name__ == '__main__':
     trainer = pl.Trainer(default_root_dir=os.path.join(args.output_dir, f"model_{train_parameters.latent_dim}"),
                          gpus=1 if str(device).startswith("cuda") else 0,
                          max_epochs=train_parameters.num_epochs,
-                         callbacks=[ModelCheckpoint(save_weights_only=True),
-                                    LearningRateMonitor("epoch")])
+                         callbacks=[TrainCustomCallback])
     trainer.logger._log_graph = False           # If True, we plot the computation graph in tensorboard
     trainer.logger._default_hp_metric = None    # Optional logging argument that we don't need
 
@@ -57,6 +56,6 @@ if __name__ == '__main__':
                         width=width,
                         height=height)
 
-    trainer.fit(model, train_loader, val_loader)
-    # Test best model on validation set
-    val_result = trainer.test(model, test_dataloaders=val_loader, verbose=False)
+    trainer.fit(model, train_loader, val_loader, verbose=False)
+    # # Test best model on validation set
+    # val_result = trainer.test(model, test_dataloaders=val_loader, verbose=False)

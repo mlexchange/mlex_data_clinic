@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
+import pytorch_lightning as pl
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -139,12 +140,12 @@ class Autoencoder(pl.LightningModule):
         optimizer = optim.Adam(self.parameters(), lr=1e-3)
         # Using a scheduler is optional but can be helpful.
         # The scheduler reduces the LR if the validation performance hasn't improved for the last N epochs
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                         mode='min',
-                                                         factor=0.2,
-                                                         patience=20,
-                                                         min_lr=5e-5)
-        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss"}
+        # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+        #                                                  mode='min',
+        #                                                  factor=0.2,
+        #                                                  patience=20,
+        #                                                  min_lr=5e-5)
+        return {"optimizer": optimizer} #, "lr_scheduler": scheduler, "monitor": "val_loss"}
 
     def training_step(self, batch, batch_idx):
         loss = self._get_reconstruction_loss(batch)
@@ -158,3 +159,24 @@ class Autoencoder(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         loss = self._get_reconstruction_loss(batch)
         self.log('test_loss', loss)
+
+
+class TrainCustomCallback(pl.callbacks):
+    def on_validation_epoch_end(self, trainer, pl_module):
+        logs = pl_module.log
+        epoch = trainer.current_epoch
+        if logs.get('val_loss'):
+            if epoch == 0:
+                print('epoch loss val_loss\n', flush=True)
+            loss = logs.get('loss')
+            val_loss = logs.get('val_loss')
+            print(str(epoch) + ' ' + str(loss) + ' ' + str(val_loss) + '\n', flush=True)
+
+        else:
+            if epoch == 0:
+                print('epoch loss\n', flush=True)
+            loss = logs.get('loss')
+            print(str(epoch) + ' ' + str(loss) + '\n', flush=True)
+
+    def on_train_end(self, logs=None):
+        print('Train process completed', flush=True)

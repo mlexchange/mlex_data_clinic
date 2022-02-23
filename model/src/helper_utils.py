@@ -27,18 +27,13 @@ def get_dataloaders(data_path, batch_size, shuffle, num_workers, set):
         # check if grayscale
         if len(data.shape) == 2:
             data = data[:, np.newaxis]
-        # if data.shape[-1] == 1:
-        #     data = np.squeeze(np.stack((data,) * 3, axis=3))
         dataset = torch.tensor(data)
-        dataset = dataset.transpose(1, 3)
-        (width, height) = dataset.shape[2:4]
     else:
         first_data = glob.glob(data_path + '/**/*.*', recursive=True)
         data_type = os.path.splitext(first_data[0])[-1]
 
         if data_type in ['.tiff', '.tif', '.jpg', '.jpeg', '.png']:
             img = Image.open(first_data[-1])
-            (width, height) = img.size
             transform = transforms.Compose([# transforms.Resize([256, 256]),
                                             # transforms.RandomCrop(224),
                                             # transforms.RandomHorizontalFlip(),
@@ -46,8 +41,9 @@ def get_dataloaders(data_path, batch_size, shuffle, num_workers, set):
             dataset = datasets.ImageFolder(root=data_path, transform=transform)
         else:
             dataset = []
-            (width, height) = (0,0)
 
+    dataset = dataset.transpose(1, 3)
+    (input_channels, width, height) = dataset.shape[1:]
     dataloader = torch.utils.data.DataLoader([[dataset[i], dataset[i]] for i in range(len(dataset))],
                                              shuffle=shuffle,
                                              batch_size=batch_size,
