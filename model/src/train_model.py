@@ -8,9 +8,12 @@ import pytorch_lightning as pl
 from model import Autoencoder, TrainingParameters
 from helper_utils import get_dataloaders
 
+
+SEED = 42
+NUM_WORKERS = 0
+
+
 if __name__ == '__main__':
-    SEED = 42
-    NUM_WORKERS = 0
 
     parser = argparse.ArgumentParser()
     parser.add_argument('input_dir', help='input directory')
@@ -19,9 +22,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     train_parameters = TrainingParameters(**json.loads(args.parameters))
 
-    try:
+    if train_parameters.seed:
         seed = train_parameters.seed    # Setting the user-defined seed
-    except Exception as err:
+    else:
         seed = SEED                     # Setting the pre-defined seed
     pl.seed_everything(seed)
     print("Seed: ", seed)
