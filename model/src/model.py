@@ -161,7 +161,7 @@ class Autoencoder(pl.LightningModule):
 
 
 class TrainCustomCallback(Callback):
-    def on_validation_epoch_end(self, trainer, pl_module):
+    def on_epoch_end(self, trainer, pl_module):
         logs = pl_module.log
         epoch = trainer.current_epoch
         if logs.get('val_loss'):
@@ -177,5 +177,5 @@ class TrainCustomCallback(Callback):
             loss = logs.get('loss')
             print(str(epoch) + ' ' + str(loss) + '\n', flush=True)
 
-    def on_train_end(self):
+    def on_train_end(self, trainer, pl_module):
         print('Train process completed', flush=True)
