@@ -1,82 +1,102 @@
-import glob
 import os
 
 from PIL import Image
 import numpy as np
 import torch
-from torchvision import datasets, transforms
 
 
-def get_dataloaders(data_path, batch_size, shuffle, num_workers, set):
+def split_dataset(dataset, val_pct):
+    '''
+    This function splits the input dataset according to the splitting ratios
+    Args:
+        dataset:            Full dataset to be split
+        val_pct:           Percentage for validation [0-100]
+    Returns:
+        train_set:          Training torch subset
+        val_set:            Testing torch subset
+    '''
+    data_size = len(dataset)
+    val_size = int(val_pct*data_size/100)
+    train_set, val_set = torch.utils.data.random_split(dataset, [data_size - val_size, val_size])
+    return train_set, val_set
+
+
+def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_size=None,
+                    data_keyword=None, val_pct=None):
     '''
     This function creates the dataloaders in PyTorch from directory or npy files
     Args:
         data_path:      [str] Path to data
         batch_size:     [int] Batch size
-        shuffle:        [bool] Shuffle data
         num_workers:    [int] Number of workers
-        set:            [str] Set to load: train, val, or test
+        shuffle:        [bool] Shuffle data
+        target_size:    [tuple] Target size
+        data_keyword:   [str] Keyword for data upload if npz file
+        val_pct:        [int] Percentage for validation [0-100]
     Returns:
         PyTorch DataLoaders
     '''
     data_type = os.path.splitext(data_path)[-1]
-    if data_type == '.npz':
-        # read from numpy array
-        with np.load(data_path, mmap_mode=None, allow_pickle=False, fix_imports=True, encoding='ASCII') as file:
-            data = np.array(file[set])
-        # check if grayscale
-        if len(data.shape) == 2:
-            data = data[:, np.newaxis]
-        dataset = torch.tensor(data)
-    else:
-        first_data = glob.glob(data_path + '/**/*.*', recursive=True)
-        data_type = os.path.splitext(first_data[0])[-1]
-
-        if data_type in ['.tiff', '.tif', '.jpg', '.jpeg', '.png']:
-            img = Image.open(first_data[-1])
-            transform = transforms.Compose([# transforms.Resize([256, 256]),
-                                            # transforms.RandomCrop(224),
-                                            # transforms.RandomHorizontalFlip(),
-                                            transforms.ToTensor()])
-            dataset = datasets.ImageFolder(root=data_path, transform=transform)
+    if data_type == '.npz' or data_type == '.npy':
+        if data_type == '.npz':
+            with np.load(data_path, mmap_mode=None, allow_pickle=False, fix_imports=True, encoding='ASCII') as file:
+                data = np.array(file[data_keyword])
         else:
-            dataset = []
-
+            data = np.load(data_path)   # one single datafile
+    else:       # read from directory
+        data = []
+        for dirpath, subdirs, files in os.walk(data_path):
+            for file in files:
+                if os.path.splitext(file)[-1] in ['.tiff', '.tif', '.jpg', '.jpeg', '.png']:
+                    filename = os.path.join(dirpath, file)
+                    img = Image.open(filename)
+                    data.append(np.array(img))
+        data = np.array(data).astype('float32')
+    if len(data.shape) == 3:
+        data = np.expand_dims(data, 3)
+    dataset = torch.tensor(data)
     dataset = dataset.transpose(1, 3)
+    if target_size:
+        dataset = torch.nn.functional.interpolate(dataset, target_size)
     (input_channels, width, height) = dataset.shape[1:]
-    dataloader = torch.utils.data.DataLoader([[dataset[i], dataset[i]] for i in range(len(dataset))],
-                                             shuffle=shuffle,
-                                             batch_size=batch_size,
-                                             num_workers=num_workers)
-    return dataloader, (width, height)
-
-
-def split_dataset(dataset, data_split):
-    '''
-    This function splits the input dataset according to the splitting ratios
-    Args:
-        dataset:            Full dataset to be split
-        data_split:         List of split ratios according to the following:
-                                Case 1: [training_ratio] --> split dataset for training and testing only
-                                Case 2: [training_ratio, validation_ratio] --> include validation
-                            where 0<ratio<1
-    Returns:
-        train_set:          Training torch subset
-        test_set:           Testing torch subset
-        Optional[val_set]:  Validation torch subset
-    '''
-    train_split = data_split[0]
-    data_size = dataset.shape[0]
-    train_size = int(train_split * data_size)
-    if len(data_split) == 1:
-        # Split data for training and testing
-        train_set, test_set = torch.utils.data.random_split(dataset, [train_size, data_size - train_size])
-        train_set.indices
-        return train_set, test_set
+    if val_pct:
+        train_set, val_set = split_dataset(dataset, val_pct)
+        train_loader = torch.utils.data.DataLoader(
+            [[train_set[i], train_set[i]] for i in range(len(train_set))],
+            shuffle=shuffle,
+            batch_size=batch_size,
+            num_workers=num_workers)
+        if val_pct>0:
+            val_loader = torch.utils.data.DataLoader(
+                [[val_set[i], val_set[i]] for i in range(len(val_set))],
+                shuffle=False,
+                batch_size=batch_size,
+                num_workers=num_workers)
+            data_loader = [train_loader, val_loader]
+        else:
+            data_loader = [train_loader, None]
     else:
-        # Split data for training, validation, and testing
-        val_split = data_split[1]
-        val_size = int(val_split * data_size)
-        train_set, val_set, test_set = torch.utils.data.random_split(dataset, [train_size, val_size,
-                                                                               data_size - train_size - val_size])
-        return train_set, val_set, test_set
+        data_loader = torch.utils.data.DataLoader(
+            [[dataset[i], dataset[i]] for i in range(len(dataset))],
+            shuffle=False,
+            batch_size=batch_size,
+            num_workers=num_workers)
+        data_loader = [data_loader, None]
+    return data_loader, (input_channels, width, height)
+
+
+def embed_imgs(model, data_loader):
+    '''
+    This function finds the latent space representation of the input data
+    Args:
+        model:          Trained model
+        data_loader:    PyTorch DataLoaders
+    Returns:
+        Latent space representation of the data
+    '''
+    embed_list = []
+    for counter, imgs in enumerate(data_loader):
+        with torch.no_grad():
+            z = model.encoder(imgs[0].to(model.device))
+        embed_list.append(z)
+    return torch.cat(embed_list, dim=0)

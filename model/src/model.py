@@ -1,18 +1,71 @@
+from enum import Enum
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 import torch
 import torch.optim as optim
 import torch.nn as nn
 import pytorch_lightning as pl
 
 
+class Optimizer(str, Enum):
+    adadelta = "Adadelta"
+    adagrad = "Adagrad"
+    adam = "Adam"
+    adamw = "AdamW"
+    sparseadam = "SparseAdam"
+    adamax = "Adamax"
+    asgd = "ASGD"
+    lbfgs = "LBFGS"
+    rmsprop = "RMSprop"
+    rprop = "Rprop"
+    sgd = "SGD"
+
+
+class Criterion(str, Enum):
+    l1loss = "L1Loss"
+    mseloss = "MSELoss"
+    crossentropyloss = "CrossEntropyLoss"
+    ctcloss = "CTCLoss"
+    nllloss = "NLLLoss"
+    poissonnllloss = "PoissonNLLLoss"
+    gaussiannllloss = "GaussianNLLLoss"
+    kldivloss = "KLDivLoss"
+    bceloss = "BCELoss"
+    bcewithlogitsloss = "BCEWithLogitsLoss"
+    marginrankingloss = "MarginRankingLoss"
+    hingeembeddingloss = "HingeEnbeddingLoss"
+    multilabelmarginloss = "MultiLabelMarginLoss"
+    huberloss = "HuberLoss"
+    smoothl1loss = "SmoothL1Loss"
+    softmarginloss = "SoftMarginLoss"
+    multilabelsoftmarginloss = "MutiLabelSoftMarginLoss"
+    cosineembeddingloss = "CosineEmbeddingLoss"
+    multimarginloss = "MultiMarginLoss"
+    tripletmarginloss = "TripletMarginLoss"
+    tripletmarginwithdistanceloss = "TripletMarginWithDistanceLoss"
+
+
 class TrainingParameters(BaseModel):
-    latent_dim: int = Field(description='latent space dimension')
+    target_size: tuple = Field(description='data target size')
     shuffle: bool = Field(description='shuffle data')
-    batch_size: int = Field(description= 'batch size')
-    num_epochs: int = Field(description='number of epochs')
+    batch_size: int = Field(description='batch size')
+    val_pct: int = Field(description='validation percentage')
+    latent_dim: int = Field(description='latent space dimension')
     base_channel_size: int = Field(description='number of base channels')
-    validation_ok: bool = Field(description='include validation')
+    num_epochs: int = Field(description='number of epochs')
+    optimizer: Optimizer
+    criterion: Criterion
+    learning_rate: float = Field(description='learning rate')
+    seed: Optional[int] = Field(description='random seed')
+
+
+class EvaluationParameters(TrainingParameters):
+    latent_dim: List[int] = Field(description='list of latent space dimensions')
+
+
+class TestingParameters(BaseModel):
+    target_size: tuple = Field(description='data target size')
+    batch_size: int = Field(description='batch size')
     seed: Optional[int] = Field(description='random seed')
 
 
@@ -34,7 +87,7 @@ class Encoder(nn.Module):
         """
         super().__init__()
         c_hid = base_channel_size
-        linear_dim = int(width*height / 64)
+        linear_dim = int(width * height / 64)
         self.net = nn.Sequential(
             nn.Conv2d(num_input_channels, c_hid, kernel_size=3, padding=1, stride=2),  # 32x32 => 16x16
             act_fn(),
@@ -74,13 +127,14 @@ class Decoder(nn.Module):
         self.width = width
         self.height = height
         c_hid = base_channel_size
-        linear_dim = int(width*height / 64)
+        linear_dim = int(width * height / 64)
         self.linear = nn.Sequential(
             nn.Linear(latent_dim, 2 * linear_dim * c_hid),
             act_fn()
         )
         self.net = nn.Sequential(
-            nn.ConvTranspose2d(2 * c_hid, 2 * c_hid, kernel_size=3, output_padding=1, padding=1, stride=2), # 4x4 => 8x8
+            nn.ConvTranspose2d(2 * c_hid, 2 * c_hid, kernel_size=3, output_padding=1, padding=1, stride=2),
+            # 4x4 => 8x8
             act_fn(),
             nn.Conv2d(2 * c_hid, 2 * c_hid, kernel_size=3, padding=1),
             act_fn(),
@@ -88,13 +142,14 @@ class Decoder(nn.Module):
             act_fn(),
             nn.Conv2d(c_hid, c_hid, kernel_size=3, padding=1),
             act_fn(),
-            nn.ConvTranspose2d(c_hid, num_input_channels, kernel_size=3, output_padding=1, padding=1, stride=2), # 16x16 => 32x32
+            nn.ConvTranspose2d(c_hid, num_input_channels, kernel_size=3, output_padding=1, padding=1, stride=2),
+            # 16x16 => 32x32
             nn.Tanh()  # The input images is scaled between -1 and 1, hence the output has to be bounded as well
         )
 
     def forward(self, x):
         x = self.linear(x)
-        x = x.reshape(x.shape[0], -1, int(self.width/8), int(self.height/8))
+        x = x.reshape(x.shape[0], -1, int(self.width / 8), int(self.height / 8))
         x = self.net(x)
         return x
 
@@ -103,12 +158,22 @@ class Autoencoder(pl.LightningModule):
     def __init__(self,
                  base_channel_size: int,
                  latent_dim: int,
+                 num_input_channels: int = 3,
+                 optimizer: object = Optimizer,
+                 criterion: object = Criterion,
                  encoder_class: object = Encoder,
                  decoder_class: object = Decoder,
-                 num_input_channels: int = 1,
+                 learning_rate: float = 1e-3,
                  width: int = 32,
                  height: int = 32):
         super().__init__()
+        self.optimizer = getattr(optim, optimizer.value)
+        self.learning_rate = learning_rate
+        if isinstance(criterion, Enum):
+            criterion = getattr(nn, criterion.value)
+            self.criterion = criterion()
+        else:
+            self.criterion = criterion
         self.train_loss = 0
         self.validation_loss = 0
         # Saving hyperparameters of autoencoder
@@ -133,20 +198,14 @@ class Autoencoder(pl.LightningModule):
         """
         x, _ = batch  # We do not need the labels
         x_hat = self.forward(x)
-        loss = torch.nn.functional.mse_loss(x, x_hat, reduction="none")
-        loss = loss.sum(dim=[1, 2, 3]).mean(dim=[0])
+        loss = self.criterion(x_hat, x)
+        #         loss = torch.nn.functional.mse_loss(x, x_hat, reduction="none")
+        #         loss = loss.sum(dim=[1, 2, 3]).mean(dim=[0])
         return loss
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-3)
-        # Using a scheduler is optional but can be helpful.
-        # The scheduler reduces the LR if the validation performance hasn't improved for the last N epochs
-        # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-        #                                                  mode='min',
-        #                                                  factor=0.2,
-        #                                                  patience=20,
-        #                                                  min_lr=5e-5)
-        return {"optimizer": optimizer} #, "lr_scheduler": scheduler, "monitor": "val_loss"}
+        optimizer = self.optimizer(self.parameters(), lr=self.learning_rate)
+        return {"optimizer": optimizer}
 
     def training_step(self, batch, batch_idx):
         loss = self._get_reconstruction_loss(batch)
@@ -166,15 +225,16 @@ class Autoencoder(pl.LightningModule):
     def on_train_epoch_end(self):
         current_epoch = self.current_epoch
         num_batches = self.trainer.num_training_batches
-        print('\n', current_epoch, ' ', self.train_loss / num_batches, end = '', flush=True)
+        train_loss = self.train_loss
+        validation_loss = self.validation_loss
+        self.train_loss = 0
+        self.validation_loss = 0
+        print(current_epoch, ' ', train_loss / num_batches, ' ', validation_loss, flush=True)
 
     def on_validation_epoch_end(self):
-        num_batches = self.trainer.num_val_batches # may be a list[int]
-        print(' ', self.validation_loss / num_batches, end = '', flush=True)
+        num_batches = self.trainer.num_val_batches[0]  # may be a list[int]
+        self.validation_loss = self.validation_loss / num_batches
 
     def on_train_end(self):
-        print('\nTrain process completed', flush=True)
+        print('Train process completed', flush=True)
 
-    # def on_test_epoch_end(self):
-    #     num_batches = self.num_test_batches # may be a list[int]
-    #     print(',', self.loss / num_batches)
