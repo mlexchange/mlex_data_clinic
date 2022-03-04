@@ -192,6 +192,15 @@ class Autoencoder(pl.LightningModule):
         x_hat = self.decoder(z)
         return x_hat
 
+    def predict_step(self, batch, batch_idx):
+        """
+        The forward function takes in an image and returns the reconstructed image
+        during the prediction step
+        """
+        x, _ = batch  # We do not need the labels
+        batch_hat = self.forward(x)
+        return batch_hat
+
     def _get_reconstruction_loss(self, batch):
         """
         Given a batch of images, this function returns the reconstruction loss (MSE in our case)

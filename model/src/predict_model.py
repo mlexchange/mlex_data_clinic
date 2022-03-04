@@ -2,6 +2,8 @@ import argparse
 import json
 import logging
 import numpy as np
+import pandas as pd
+import pytorch_lightning as pl
 import warnings
 import torch
 
@@ -26,21 +28,30 @@ if __name__ == '__main__':
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
     print("Device:", device)
 
-    [test_loader, temp], (temp_channels, temp_w, temp_h) = get_dataloaders(args.input_dir,
-                                                                           test_parameters.batch_size,
-                                                                           NUM_WORKERS,
-                                                                           False,
-                                                                           test_parameters.target_size,
-                                                                           data_keyword='x_test')
+    [test_loader, temp], (temp_channels, temp_w, temp_h), filenames = get_dataloaders(args.input_dir,
+                                                                                      test_parameters.batch_size,
+                                                                                      NUM_WORKERS,
+                                                                                      False,
+                                                                                      test_parameters.target_size,
+                                                                                      data_keyword='x_test')
 
     model = Autoencoder.load_from_checkpoint(args.model_dir + '/last.ckpt')
 
-    test_img_embeds = embed_imgs(model, test_loader)    # test images in latent space
+    trainer = pl.Trainer(progress_bar_refresh_rate=0)
+    test_img_embeds = embed_imgs(model, test_loader)  # test images in latent space
 
+    # Retrieve distance matrix
     dist_matrix = np.zeros((test_img_embeds.shape[0], test_img_embeds.shape[0]))
     for count, img_embed in enumerate(test_img_embeds):
         dist = torch.cdist(img_embed[None,], test_img_embeds, p=2)
         dist_matrix[count, :] = dist.squeeze(dim=0).detach().cpu().numpy()
+    dist_matrix = pd.DataFrame(dist_matrix)
+    if len(filenames) > 0:
+        dist_matrix['filename'] = filenames
+    dist_matrix.to_csv(args.output_dir + '/dist_matrix.csv', index=False)
 
-    # return distance matrix
-    np.savetxt(args.output_dir + '/dist_matrix.csv', dist_matrix, delimiter=' ')
+    # Reconstructed images
+    test_result = trainer.predict(model, dataloaders=test_loader)
+    test_result = torch.cat(test_result)
+    test_result = test_result.transpose(1, 3)
+    np.save(args.output_dir + '/reconstructed_images', test_result.cpu().detach().numpy())

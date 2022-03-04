@@ -37,13 +37,14 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
         PyTorch DataLoaders
     '''
     data_type = os.path.splitext(data_path)[-1]
+    list_filenames = []
     if data_type == '.npz' or data_type == '.npy':
         if data_type == '.npz':
             with np.load(data_path, mmap_mode=None, allow_pickle=False, fix_imports=True, encoding='ASCII') as file:
                 data = np.array(file[data_keyword])
         else:
-            data = np.load(data_path)   # one single datafile
-    else:       # read from directory
+            data = np.load(data_path)  # one single datafile
+    else:
         data = []
         for dirpath, subdirs, files in os.walk(data_path):
             for file in files:
@@ -51,7 +52,8 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
                     filename = os.path.join(dirpath, file)
                     img = Image.open(filename)
                     data.append(np.array(img))
-        data = np.array(data).astype('float32')
+                    list_filenames.append(filename)
+        data = (np.array(data) / 255).astype('float32')  # The dataset is normalized [0,1]
     if len(data.shape) == 3:
         data = np.expand_dims(data, 3)
     dataset = torch.tensor(data)
@@ -66,7 +68,7 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
             shuffle=shuffle,
             batch_size=batch_size,
             num_workers=num_workers)
-        if val_pct>0:
+        if val_pct > 0:
             val_loader = torch.utils.data.DataLoader(
                 [[val_set[i], val_set[i]] for i in range(len(val_set))],
                 shuffle=False,
@@ -82,7 +84,7 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
             batch_size=batch_size,
             num_workers=num_workers)
         data_loader = [data_loader, None]
-    return data_loader, (input_channels, width, height)
+    return data_loader, (input_channels, width, height), list_filenames
 
 
 def embed_imgs(model, data_loader):

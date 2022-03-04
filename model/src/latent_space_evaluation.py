@@ -36,20 +36,20 @@ if __name__ == '__main__':
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
     print("Device:", device)
 
-    [train_loader, val_loader], (input_channels, width, height) = get_dataloaders(args.input_dir,
-                                                                                  eval_parameters.batch_size,
-                                                                                  NUM_WORKERS,
-                                                                                  eval_parameters.shuffle,
-                                                                                  eval_parameters.target_size,
-                                                                                  'x_train',
-                                                                                  eval_parameters.val_pct)
+    [train_loader, val_loader], (input_channels, width, height), tmp = get_dataloaders(args.input_dir,
+                                                                                       eval_parameters.batch_size,
+                                                                                       NUM_WORKERS,
+                                                                                    eval_parameters.shuffle,
+                                                                                       eval_parameters.target_size,
+                                                                                       'x_train',
+                                                                                       eval_parameters.val_pct)
 
-    [test_loader, temp], (temp_channels, temp_w, temp_h) = get_dataloaders(args.input_dir,
-                                                                           eval_parameters.batch_size,
-                                                                           NUM_WORKERS,
-                                                                           False,
-                                                                           eval_parameters.target_size,
-                                                                           'x_test')
+    [test_loader, temp], (temp_channels, temp_w, temp_h), tmp = get_dataloaders(args.input_dir,
+                                                                                eval_parameters.batch_size,
+                                                                                NUM_WORKERS,
+                                                                                False,
+                                                                                eval_parameters.target_size,
+                                                                                'x_test')
 
     val_result = [{'test_loss': 0}]
     for count, latent_dim in enumerate(eval_parameters.latent_dim):
