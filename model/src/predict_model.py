@@ -29,11 +29,16 @@ if __name__ == '__main__':
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
     print("Device:", device)
 
+    if test_parameters.target_width*test_parameters.target_height > 0:
+        target_size = (test_parameters.target_width, test_parameters.target_height)
+    else:
+        target_size = None
+
     [test_loader, temp], (temp_channels, temp_w, temp_h), filenames = get_dataloaders(args.input_dir,
                                                                                       test_parameters.batch_size,
                                                                                       NUM_WORKERS,
                                                                                       False,
-                                                                                      test_parameters.target_size,
+                                                                                      target_size,
                                                                                       data_keyword='x_test')
 
     model = Autoencoder.load_from_checkpoint(args.model_dir + '/last.ckpt')
@@ -44,7 +49,7 @@ if __name__ == '__main__':
     # Create output directory if it does not exist
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Retrieve distance matrix
     dist_matrix = np.zeros((test_img_embeds.shape[0], test_img_embeds.shape[0]))
     for count, img_embed in enumerate(test_img_embeds):

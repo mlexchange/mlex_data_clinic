@@ -46,7 +46,9 @@ class Criterion(str, Enum):
 
 
 class TrainingParameters(BaseModel):
-    target_size: tuple = Field(description='data target size')
+    # target_size: tuple = Field(description='data target size')
+    target_width: int = Field(description='data target width')
+    target_height: int = Field(description='data target height')
     shuffle: bool = Field(description='shuffle data')
     batch_size: int = Field(description='batch size')
     val_pct: int = Field(description='validation percentage')
@@ -64,7 +66,9 @@ class EvaluationParameters(TrainingParameters):
 
 
 class TestingParameters(BaseModel):
-    target_size: tuple = Field(description='data target size')
+    # target_size: tuple = Field(description='data target size')
+    target_width: int = Field(description='data target width')
+    target_height: int = Field(description='data target height')
     batch_size: int = Field(description='batch size')
     seed: Optional[int] = Field(description='random seed')
 

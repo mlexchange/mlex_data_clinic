@@ -36,11 +36,16 @@ if __name__ == '__main__':
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
     print("Device:", device)
 
+    if eval_parameters.target_width*eval_parameters.target_height > 0:
+        target_size = (eval_parameters.target_width, eval_parameters.target_height)
+    else:
+        target_size = None
+
     [train_loader, val_loader], (input_channels, width, height), tmp = get_dataloaders(args.input_dir,
                                                                                        eval_parameters.batch_size,
                                                                                        NUM_WORKERS,
-                                                                                    eval_parameters.shuffle,
-                                                                                       eval_parameters.target_size,
+                                                                                       eval_parameters.shuffle,
+                                                                                       target_size,
                                                                                        'x_train',
                                                                                        eval_parameters.val_pct)
 
