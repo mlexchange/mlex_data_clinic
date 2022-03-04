@@ -246,4 +246,3 @@ class Autoencoder(pl.LightningModule):
 
     def on_train_end(self):
         print('Train process completed', flush=True)
-

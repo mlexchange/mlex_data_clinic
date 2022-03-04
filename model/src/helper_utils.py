@@ -43,7 +43,7 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
             with np.load(data_path, mmap_mode=None, allow_pickle=False, fix_imports=True, encoding='ASCII') as file:
                 data = np.array(file[data_keyword])
         else:
-            data = np.load(data_path)  # one single datafile
+            data = np.load(data_path)   # one single datafile
     else:
         data = []
         for dirpath, subdirs, files in os.walk(data_path):
