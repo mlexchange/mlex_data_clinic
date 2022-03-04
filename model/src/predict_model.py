@@ -3,6 +3,7 @@ import json
 import logging
 import numpy as np
 import pandas as pd
+from pathlib import Path
 import pytorch_lightning as pl
 import warnings
 import torch
@@ -40,6 +41,10 @@ if __name__ == '__main__':
     trainer = pl.Trainer(progress_bar_refresh_rate=0)
     test_img_embeds = embed_imgs(model, test_loader)  # test images in latent space
 
+    # Create output directory if it does not exist
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
     # Retrieve distance matrix
     dist_matrix = np.zeros((test_img_embeds.shape[0], test_img_embeds.shape[0]))
     for count, img_embed in enumerate(test_img_embeds):
