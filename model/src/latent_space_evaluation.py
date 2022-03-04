@@ -53,7 +53,7 @@ if __name__ == '__main__':
                                                                                 eval_parameters.batch_size,
                                                                                 NUM_WORKERS,
                                                                                 False,
-                                                                                eval_parameters.target_size,
+                                                                                target_size,
                                                                                 'x_test')
 
     val_result = [{'test_loss': 0}]
