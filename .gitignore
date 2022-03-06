@@ -1,0 +1,4 @@
+*.DS_Store
+*pycache*
+model/notebooks/results/*
+*ipynb_checkpoints*
