@@ -2,3 +2,4 @@
 *pycache*
 model/notebooks/results/*
 *ipynb_checkpoints*
+*.cache*
