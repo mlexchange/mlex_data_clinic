@@ -321,7 +321,7 @@ column_02 = html.Div([
         dbc.CardFooter(id='latent-size-out')
     ]),
     dbc.Row(LOSS_PLOT),
-    JOB_STATUS,
+    dbc.Row(JOB_STATUS),
     dcc.Interval(id='interval', interval=5 * 1000, n_intervals=0)
 ])
 
@@ -424,7 +424,7 @@ def refresh_image(img_ind, row, action_selection, data_table):
 @app.callback(
     Output('jobs-table', 'data'),
     Output('loss-plot', 'figure'),
-    Output('loss-plot', 'style'),
+    Output('show-plot', 'is_open'),
     Output('log-modal', 'is_open'),
     Output('log-display', 'children'),
     Output('jobs-table', 'active_cell'),
@@ -477,6 +477,7 @@ def update_table(n, row, active_cell, close_clicks):
                                        style={'width': '100%', 'height': '30rem', 'font-family': 'monospace'})
     style_fig = {'display': 'none'}
     fig = go.Figure(go.Scatter(x=[], y=[]))
+    show_plot = False
     if row:
         log = data_table[row[0]]["job_logs"]
         if log:
@@ -484,8 +485,9 @@ def update_table(n, row, active_cell, close_clicks):
                 start = log.find('epoch')
                 if start > -1 and len(log) > start + 5:
                     fig = generate_loss_plot(log, start)
+                    show_plot = True
                     style_fig = {'width': '100%', 'display': 'block'}
-    return data_table, fig, style_fig, is_open, log_display, None
+    return data_table, fig, show_plot, is_open, log_display, None
 
 
 @app.callback(

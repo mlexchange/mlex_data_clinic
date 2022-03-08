@@ -118,7 +118,7 @@ def generate_loss_plot(log, start):
     if end == -1:
         end = len(log)
     log = log[start:end]
-    df = pd.read_csv(StringIO(log.replace('\n\n', '\n')), sep=' ')
+    df = pd.read_csv(StringIO(log.replace('\n\n', '\n')), sep='\t')
     df.set_index('epoch', inplace=True)
     try:
         fig = px.line(df, markers=True)
