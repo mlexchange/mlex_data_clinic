@@ -321,7 +321,7 @@ column_02 = html.Div([
         dbc.CardFooter(id='latent-size-out')
     ]),
     dbc.Row(LOSS_PLOT),
-    dbc.Row(JOB_STATUS),
+    JOB_STATUS,
     dcc.Interval(id='interval', interval=5 * 1000, n_intervals=0)
 ])
 
