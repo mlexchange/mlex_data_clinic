@@ -1,3 +1,4 @@
+import os
 import dash
 from dash import Dash, html, dcc, dcc, dash_table
 from dash.dependencies import Input, Output, State
@@ -14,6 +15,7 @@ import templates
 
 
 ### GLOBAL VARIABLES
+DATA_DIR = str(os.environ['DATA_DIR'])
 DATA_PATH = "data/mixed_small_32x32.npz"
 DATA = np.load(DATA_PATH)   # making reference dataset
 MODEL_DATABASE = {"The Model": "path-to-model"} # hardcoded model database as dict
@@ -93,7 +95,7 @@ TRAINING_PARAMS = [
     ]),
     dbc.FormGroup([
         dbc.Label('Number of epochs'),
-        dcc.Slider(id='epochs',
+        dcc.Slider(id='num_epochs',
                    min=1,
                    max=1000,
                    value=3,
@@ -532,14 +534,14 @@ def execute(clicks, children, action_selection, job_data, row):
                         description='',
                         deploy_location='local',
                         gpu=True,
-                        data_uri='{}'.format(DATA_PATH),
+                        data_uri='{}'.format(DATA_DIR),
                         container_uri='mlexchange/unsupervised-classifier',
                         container_cmd=command,
                         container_kwargs={'parameters': json_dict,
                                           'directories': directories,
                                           'experiment_id': experiment_id}
                         )
-        response = job.launch_job()
+        job.launch_job()
         return contents
     return []
 
