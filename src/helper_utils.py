@@ -67,16 +67,32 @@ def plot_figure(image):
     return "data:image/png;base64,{}".format(png_base64)
 
 
-def get_bottleneck(ls_var):
+def get_bottleneck(ls_var, width, height):
     # x = [-200, -200,     -5,        0,    5, 200,  200,      5,         0,     -5, -200]
     # y = [-200,  200, 200/8, ls_var/2, 200/8, 200, -200, -200/8, -ls_var/2, -200/8, -200]
+    ratio = 400 / (width * height)  # ratio between flatten input data and selected latent space size
+    annotation1 = str(width)+'x'+str(height)
+    annotation2 = str(ls_var)+'x1'
+    if ls_var>width*height:
+        color = 'rgba(238, 69, 80, 1)'
+    else:
+        color = 'rgba(168, 216, 234, 1)'
+    ls_var = ls_var*ratio
     x = [-200, -200, 0, 200, 200, 0, -200]
-    y = [-200, 200,  ls_var/2, 200, -200, -ls_var/2, -200]
+    y = [-200, 200, ls_var / 2, 200, -200, -ls_var / 2, -200]
     fig = go.Figure(go.Scatter(x=x, y=y,
                                fill='toself',
-                               fillcolor='rgba(168, 216, 234, 1)',
-                               line_color='rgba(168, 216, 234, 1)'))
+                               fillcolor=color,
+                               line_color=color))
+    fig.add_shape(type="rect",
+                  x0=-1, y0=ls_var/2,
+                  x1=1, y1=-ls_var/2,
+                  fillcolor="RoyalBlue",
+                  line_color="RoyalBlue")
     fig.update_traces(marker_size=1, hoverinfo='skip')
+    fig.add_annotation(x=-187, y=-25, text=annotation1, textangle=270, font={'size': 28})
+    fig.add_annotation(x=199, y=-25, text=annotation1, textangle=270, font={'size': 28})
+    fig.add_annotation(x=-10, y=0, text=annotation2, textangle=270, font={'size': 28}, showarrow=False)
     fig.update_xaxes(range=[-200,200],
                      showgrid=False,
                      showticklabels=False,

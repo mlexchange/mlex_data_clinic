@@ -43,6 +43,16 @@ TRAINING_PARAMS = [
         dbc.Input(id='target_height', type="int", value=32),
     ]),
     dbc.FormGroup([
+        dbc.Label('Latent Dimension'),
+        dcc.Slider(id='latent_dim',
+                  min=0,
+                  max=1000,
+                  value=32,
+                  step=1,
+                  tooltip={'always_visible': True,
+                           'placement': 'bottom'})
+    ]),
+    dbc.FormGroup([
         dbc.Label('Shuffle Training Data'),
         dbc.RadioItems(
             id='shuffle',
@@ -70,16 +80,6 @@ TRAINING_PARAMS = [
                   max=100,
                   value=20,
                   step=5,
-                  tooltip={'always_visible': True,
-                           'placement': 'bottom'})
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Latent Dimension'),
-        dcc.Slider(id='latent_dim',
-                  min=0,
-                  max=1000,
-                  value=32,
-                  step=1,
                   tooltip={'always_visible': True,
                            'placement': 'bottom'})
     ]),
@@ -320,7 +320,7 @@ column_02 = html.Div([
             ),
         dbc.CardFooter(id='latent-size-out')
     ]),
-    dbc.Row(LOSS_PLOT),
+    html.Div(LOSS_PLOT),
     JOB_STATUS,
     dcc.Interval(id='interval', interval=5 * 1000, n_intervals=0)
 ])
@@ -347,17 +347,21 @@ app.layout = html.Div(
     Output('ls_graph', 'src'),
     Output('latent-size-out', 'children'),
     Input('latent_dim', 'value'),
+    Input('target_width', 'value'),
+    Input('target_height', 'value')
 )
-def update_latent_space_graph(ls_var):
+def update_latent_space_graph(ls_var, target_width, target_height):
     '''
     This callback updates the latent space graph
     Args:
         ls_var:         Latent space value
+
     Returns:
         bottleneck_graph
     '''
-    ratio = 400/(DATA['x_train'].shape[1]*DATA['x_train'].shape[2])       # ratio between flatten input data and selected latent space size
-    return get_bottleneck(ls_var*ratio), 'Latent Space Dimension: '+str(ls_var)
+    width = DATA['x_train'].shape[1]
+    height = DATA['x_train'].shape[2]
+    return get_bottleneck(ls_var, int(target_width), int(target_height)), 'Data size: '+str(width)+'x'+str(height)
 
 
 @app.callback(
@@ -404,19 +408,26 @@ def refresh_image(img_ind, row, action_selection, data_table):
         img-slider-max:     Maximum value of the slider according to the dataset (train vs test)
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    if 'jobs-table.selected_rows' in changed_id and data_table[row[0]]['job_type'] == 'prediction_model':
-        try:
+    try:
+        if ('img-slider.value' in changed_id or 'jobs-table.selected_rows' in changed_id) \
+                and data_table[row[0]]['job_type'] == 'prediction_model':
             origimg = Image.fromarray((np.squeeze(DATA['x_test'][img_ind]*255)).astype(np.uint8))
             origimg = plot_figure(origimg)
-            recimg = origimg
+            job_id = data_table[row[0]]['experiment_id']
+            reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
+            reconstructed_data = np.load(reconstructed_path)
+            try:
+                recimg = plot_figure(Image.fromarray((np.squeeze(reconstructed_data[img_ind]*255)).astype(np.uint8)))
+            except Exception as e:
+                recimg = plot_figure(Image.fromarray((np.zeros(origimg.size).astype(np.uint8))))
             slider_max = DATA['x_test'].shape[0] - 1
-            return plot_figure(origimg), plot_figure(recimg), slider_max
-        except Exception as e:
-            print(e)
+            return origimg, recimg, slider_max
+    except Exception as e:
+        print(e)
     if action_selection in ['train_model', 'transfer_learning']:
         origimg = Image.fromarray((np.squeeze(DATA['x_train'][img_ind]*255)).astype(np.uint8))
+        recimg = plot_figure(Image.fromarray((np.zeros(origimg.size).astype(np.uint8))))
         origimg = plot_figure(origimg)
-        recimg = origimg
         slider_max = DATA['x_train'].shape[0] - 1
     return origimg, recimg,  slider_max
 
