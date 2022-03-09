@@ -20,7 +20,7 @@ import templates
 DATA_DIR = str(os.environ['DATA_DIR'])
 # DATA_PATH = "data/mixed_small_32x32.npz"
 DATA_PATH = 'data'
-if os.path.splitext(DATA_PATH[1])[-1] == '.npz':
+if os.path.splitext(DATA_PATH)[-1] == '.npz':
     DATA = np.load(DATA_PATH)   # making reference dataset
 else:
     DATA = load_from_dir(DATA_PATH)
@@ -437,6 +437,7 @@ def load_parameters_and_content(model_selection, action_selection):
      Output('rec_img', 'src'),
      Output('ls_graph', 'src'),
      Output('img-slider', 'max'),
+     Output('img-slider', 'value'),
      Output('data-size-out', 'children')],
     Input({'type': 'parameter_editor', 'param_key': 'latent_dim', 'name': 'latent_dim', 'layer': 'input', 'index': ALL}, 'value'),
     Input({'type': 'parameter_editor', 'param_key': 'target_width', 'name': 'target_width', 'layer': 'input', 'index': ALL}, 'value'),
@@ -468,6 +469,8 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
         if row:
             if data_table[row[0]]['job_type'] == 'prediction_model':
                 data_name = 'x_test'
+                slider_max = DATA[data_name].shape[0] - 1
+                img_ind = min(slider_max, img_ind)
                 job_id = data_table[row[0]]['experiment_id']
                 reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
                 reconstructed_data = np.load(reconstructed_path)
@@ -492,12 +495,14 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
         else:
             data_name = 'x_test'
             ls_plot = dash.no_update
-    if type(DATA) == np.ndarray:                        # loading from array
-        origimg = Image.fromarray((np.squeeze(DATA[data_name][img_ind] * 255)).astype(np.uint8))
+    if type(DATA) != str:                        # loading from array
         slider_max = DATA[data_name].shape[0] - 1
+        img_ind = min(slider_max, img_ind)
+        origimg = Image.fromarray((np.squeeze(DATA[data_name][img_ind] * 255)).astype(np.uint8))
     else:                                               # loading from directory
-        origimg = Image.open(DATA[data_name][img_ind])
         slider_max = len(DATA[data_name]) - 1
+        img_ind = min(slider_max, img_ind)
+        origimg = Image.open(DATA[data_name][img_ind])
     (width, height) = origimg.size
     data_size = 'Data size: '+str(width)+'x'+str(height)
     if 'reconst_img' not in locals():
@@ -616,7 +621,7 @@ def execute(clicks, children, action_selection, job_data, row):
         json_dict = input_params
         kwargs = {}
         if action_selection == 'train_model':
-            if type(DATA) == np.ndarray:
+            if type(DATA) != str:
                 data_path = DATA_PATH
             else:
                 data_path = DATA_PATH + '/train'
@@ -627,7 +632,7 @@ def execute(clicks, children, action_selection, job_data, row):
             in_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, training_exp_id))
             kwargs = {'train_params': job_data[row[0]]['parameters']}
         if action_selection == 'prediction_model':
-            if type(DATA) == np.ndarray:
+            if type(DATA) != str:
                 data_path = DATA_PATH
             else:
                 data_path = DATA_PATH + '/test'
