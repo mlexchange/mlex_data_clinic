@@ -1,3 +1,4 @@
+import os
 import base64
 import json
 import sys
@@ -38,18 +39,48 @@ class SimpleJob:
         self.container_kwargs = container_kwargs
 
     def launch_job(self):
-        """
+        '''
         Send job to computing service
-        :return:
-        """
+        Returns:
+            Job status
+        '''
         url = 'http://job-service:8080/api/v0/jobs'
         return requests.post(url, json=self.__dict__).status_code
 
 
+def load_from_dir(data_path):
+    '''
+    Loads data from directory
+    Args:
+        data_path:      Path to data
+    Returns:
+        data_files:     Dictionary with the list of filenames for training and testing
+    '''
+    folders = ['/train', '/test']
+    keys = ['x_train', 'x_test']
+    data_type = ['tiff', 'tif', 'jpg', 'jpeg', 'png']
+    data_files = {keys[0]: [], keys[1]: []}        # dictionary of filenames
+    for folder, key in zip(folders, keys):
+        path, train_folders, extra_files = next(os.walk(data_path+folder))
+        for subfolder in train_folders:
+            path, list_dirs, filenames = next(os.walk(data_path+folder + '/' + subfolder))
+            for filename in filenames:
+                if filename.split('.')[-1] in data_type:
+                    data_files[key].append(data_path + folder + '/' + subfolder + '/' + filename)
+    return data_files
+
+
 def plot_figure(image):
+    '''
+    Plots images in frontend
+    Args:
+        image:  Image to plot
+    Returns:
+        plot in base64 format
+    '''
     try:
         h,w = image.size
-    except:
+    except Exception:
         h,w,c = image.size
     fig = px.imshow(image, height=200, width=200*w/h)
     fig.update_xaxes(showgrid=False,
@@ -68,16 +99,23 @@ def plot_figure(image):
 
 
 def get_bottleneck(ls_var, width, height):
-    # x = [-200, -200,     -5,        0,    5, 200,  200,      5,         0,     -5, -200]
-    # y = [-200,  200, 200/8, ls_var/2, 200/8, 200, -200, -200/8, -ls_var/2, -200/8, -200]
-    ratio = 400 / (width * height)  # ratio between flatten input data and selected latent space size
-    annotation1 = str(width)+'x'+str(height)
-    annotation2 = str(ls_var)+'x1'
-    if ls_var>width*height:
-        color = 'rgba(238, 69, 80, 1)'
+    '''
+    Plots the latent space representation
+    Args:
+        ls_var:     latent space value
+        width:      data width
+        height:     data height
+    Returns:
+        plot with graphical representation of the latent space in base64 format
+    '''
+    ratio = 400 / (width * height)              # ratio between flatten input data and selected latent space size
+    annotation1 = str(width)+'x'+str(height)    # target data size
+    annotation2 = str(ls_var)+'x1'              # target latent space
+    if ls_var>width*height:                     # if the latent space is larger than the data dimension (flatten),
+        color = 'rgba(238, 69, 80, 1)'          # the bottleneck is shown in red
     else:
         color = 'rgba(168, 216, 234, 1)'
-    ls_var = ls_var*ratio
+    ls_var = ls_var*ratio                       # adjusting the latent space with respect to the images size in frontend
     x = [-200, -200, 0, 200, 200, 0, -200]
     y = [-200, 200, ls_var / 2, 200, -200, -ls_var / 2, -200]
     fig = go.Figure(go.Scatter(x=x, y=y,
@@ -109,11 +147,19 @@ def get_bottleneck(ls_var, width, height):
     png = plotly.io.to_image(fig)
     png_base64 = base64.b64encode(png).decode('ascii')
     return "data:image/png;base64,{}".format(png_base64)
-    # return fig
 
 
-# Queries the job from the computing database
 def get_job(user, mlex_app, job_type=None, deploy_location=None):
+    '''
+    Queries the job from the computing database
+    Args:
+        user:               username
+        mlex_app:           mlexchange application
+        job_type:           type of job
+        deploy_location:    deploy location
+    Returns:
+        list of jobs that match the query
+    '''
     url = 'http://job-service:8080/api/v0/jobs?'
     if user:
         url += ('&user=' + user)
@@ -128,8 +174,15 @@ def get_job(user, mlex_app, job_type=None, deploy_location=None):
     return data
 
 
-# Generate loss plot
 def generate_loss_plot(log, start):
+    '''
+    Generate loss plot
+    Args:
+        log:    job logs with the loss/accuracy per epoch
+        start:  index where the list of loss values start
+    Returns:
+        loss plot
+    '''
     end = log.find('Train process completed')
     if end == -1:
         end = len(log)
