@@ -196,3 +196,8 @@ def generate_loss_plot(log, start):
     except Exception as e:
         print(e)
         return go.Figure(go.Scatter(x=[], y=[]))
+
+def str_to_dict(text):
+    text = text.replace('True', 'true')
+    text = text.replace('False', 'false')
+    return json.loads(text.replace('\'', '\"'))

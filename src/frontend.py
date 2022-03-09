@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 import uuid
 
 from helper_utils import SimpleJob
-from helper_utils import plot_figure, get_bottleneck, get_job, generate_loss_plot, load_from_dir
+from helper_utils import plot_figure, get_bottleneck, get_job, generate_loss_plot, load_from_dir, str_to_dict
 import templates
 
 
@@ -465,21 +465,23 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'jobs-table.selected_rows' in changed_id or 'img-slider.value' in changed_id:
-        if data_table[row[0]]['job_type'] == 'prediction_model':
-            data_name = 'x_test'
-            job_id = data_table[row[0]]['experiment_id']
-            reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
-            reconstructed_data = np.load(reconstructed_path)
-            reconst_img = Image.fromarray((np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
-            if 'img-slider.value' in changed_id:
-                ls_plot = dash.no_update
-            else:
-                indx = data_table[row[0]]['parameters'].find('Training Parameters:')
-                params = data_table[row[0]]['parameters'][indx+21:].replace('True', 'true')
-                params = params.replace('False', 'false')
-                train_params = json.loads(params.replace('\'', '\"'))
-                ls_var = [train_params['latent_dim']]
-                ls_plot = get_bottleneck(ls_var[0], int(target_width[0]), int(target_height[0]))
+        if row:
+            if data_table[row[0]]['job_type'] == 'prediction_model':
+                data_name = 'x_test'
+                job_id = data_table[row[0]]['experiment_id']
+                reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
+                reconstructed_data = np.load(reconstructed_path)
+                reconst_img = Image.fromarray((np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
+                if 'img-slider.value' in changed_id:
+                    ls_plot = dash.no_update
+                else:
+                    indx = data_table[row[0]]['parameters'].find('Training Parameters:')
+                    test_params = str_to_dict(data_table[row[0]]['parameters'][:indx])
+                    train_params = str_to_dict(data_table[row[0]]['parameters'][indx+21:])
+                    ls_var = train_params['latent_dim']
+                    target_width = test_params['target_width']
+                    target_height = test_params['target_height']
+                    ls_plot = get_bottleneck(ls_var, target_width, target_height)
     if 'data_name' not in locals():
         if action_selection in ['train_model', 'transfer_learning']:
             data_name = 'x_train'
@@ -495,7 +497,7 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
         slider_max = DATA[data_name].shape[0] - 1
     else:                                               # loading from directory
         origimg = Image.open(DATA[data_name][img_ind])
-        slider_max = len(DATA[data_name])
+        slider_max = len(DATA[data_name]) - 1
     (width, height) = origimg.size
     data_size = 'Data size: '+str(width)+'x'+str(height)
     if 'reconst_img' not in locals():
