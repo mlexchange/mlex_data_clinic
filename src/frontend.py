@@ -1,7 +1,9 @@
 import os
+import json
 import dash
-from dash import Dash, html, dcc, dcc, dash_table
+from dash import Dash, html, dcc, dcc, dash_table, MATCH, ALL
 from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import numpy as np
 import pathlib
@@ -10,21 +12,25 @@ import plotly.graph_objects as go
 import uuid
 
 from helper_utils import SimpleJob
-from helper_utils import plot_figure, get_bottleneck, get_job, generate_loss_plot
+from helper_utils import plot_figure, get_bottleneck, get_job, generate_loss_plot, load_from_dir
 import templates
 
 
-### GLOBAL VARIABLES
+### GLOBAL VARIABLES AND DATA LOADING
 DATA_DIR = str(os.environ['DATA_DIR'])
-DATA_PATH = "data/mixed_small_32x32.npz"
-DATA = np.load(DATA_PATH)   # making reference dataset
+# DATA_PATH = "data/mixed_small_32x32.npz"
+DATA_PATH = 'data'
+if os.path.splitext(DATA_PATH[1])[-1] == '.npz':
+    DATA = np.load(DATA_PATH)   # making reference dataset
+else:
+    DATA = load_from_dir(DATA_PATH)
 MODEL_DATABASE = {"The Model": "path-to-model"} # hardcoded model database as dict
 USER = 'admin'
 
 
 #### SETUP DASH APP ####
 external_stylesheets = [dbc.themes.BOOTSTRAP, "../assets/segmentation-style.css"]
-app = Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
+app = Dash(__name__, external_stylesheets=external_stylesheets)#, suppress_callback_exceptions=True)
 server = app.server
 app.title = "MLExchange | Data Clinic"
 
@@ -36,15 +42,29 @@ header = templates.header()
 TRAINING_PARAMS = [
     dbc.FormGroup([
         dbc.Label('Target Width'),
-        dbc.Input(id='target_width', debounce=True, type="int", value=32),
+        dbc.Input(id={'type': 'parameter_editor',
+                      'name': 'target_width',
+                      'param_key': 'target_width',
+                      'layer': 'input',
+                      'index': 0},
+                  debounce=True, type="int", value=32),
     ]),
     dbc.FormGroup([
         dbc.Label('Target Height'),
-        dbc.Input(id='target_height', type="int", value=32),
+        dbc.Input(id={'type': 'parameter_editor',
+                      'name': 'target_height',
+                      'param_key': 'target_height',
+                      'layer': 'input',
+                      'index': 0},
+                  value=32),
     ]),
     dbc.FormGroup([
         dbc.Label('Latent Dimension'),
-        dcc.Slider(id='latent_dim',
+        dcc.Slider(id={'type': 'parameter_editor',
+                      'name': 'latent_dim',
+                      'param_key': 'latent_dim',
+                      'layer': 'input',
+                       'index': 0},
                   min=0,
                   max=1000,
                   value=32,
@@ -55,7 +75,10 @@ TRAINING_PARAMS = [
     dbc.FormGroup([
         dbc.Label('Shuffle Training Data'),
         dbc.RadioItems(
-            id='shuffle',
+            id={'type': 'parameter_editor',
+                'name': 'shuffle',
+                'param_key': 'shuffle',
+                'layer': 'input'},
             options=[
                {'label': 'True', 'value': True},
                {'label': 'False', 'value': False},
@@ -65,7 +88,10 @@ TRAINING_PARAMS = [
     ]),
     dbc.FormGroup([
         dbc.Label('Batch Size'),
-        dcc.Slider(id='batch_size',
+        dcc.Slider(id={'type': 'parameter_editor',
+                      'name': 'batch_size',
+                      'param_key': 'batch_size',
+                      'layer': 'input'},
                   min=16,
                   max=128,
                   value=32,
@@ -75,7 +101,10 @@ TRAINING_PARAMS = [
     ]),
     dbc.FormGroup([
         dbc.Label('Validation Percentage'),
-        dcc.Slider(id='val_pct',
+        dcc.Slider(id={'type': 'parameter_editor',
+                      'name': 'val_pct',
+                      'param_key': 'val_pct',
+                      'layer': 'input'},
                   min=0,
                   max=100,
                   value=20,
@@ -85,7 +114,10 @@ TRAINING_PARAMS = [
     ]),
     dbc.FormGroup([
         dbc.Label('Base Channel Size'),
-        dcc.Slider(id='base_channel_size',
+        dcc.Slider(id={'type': 'parameter_editor',
+                      'name': 'base_channel_size',
+                      'param_key': 'base_channel_size',
+                      'layer': 'input'},
                   min=0,
                   max=1000,
                   value=32,
@@ -95,7 +127,10 @@ TRAINING_PARAMS = [
     ]),
     dbc.FormGroup([
         dbc.Label('Number of epochs'),
-        dcc.Slider(id='num_epochs',
+        dcc.Slider(id={'type': 'parameter_editor',
+                      'name': 'num_epochs',
+                      'param_key': 'num_epochs',
+                      'layer': 'input'},
                    min=1,
                    max=1000,
                    value=3,
@@ -105,7 +140,10 @@ TRAINING_PARAMS = [
     dbc.FormGroup([
         dbc.Label('Optimizer'),
         dcc.Dropdown(
-            id='optimizer',
+            id={'type': 'parameter_editor',
+                      'name': 'optimizer',
+                      'param_key': 'optimizer',
+                      'layer': 'input'},
             options=[
                 {'label': 'Adadelta', 'value': 'Adadelta'},
                 {'label': 'Adagrad', 'value': 'Adagrad'},
@@ -125,7 +163,10 @@ TRAINING_PARAMS = [
     dbc.FormGroup([
         dbc.Label('Criterion'),
         dcc.Dropdown(
-            id='criterion',
+            id={'type': 'parameter_editor',
+                      'name': 'criterion',
+                      'param_key': 'criterion',
+                      'layer': 'input'},
             options=[
                 {'label': 'L1Loss', 'value': 'L1Loss'},
                 {'label': 'MSELoss', 'value': 'MSELoss'},
@@ -154,37 +195,62 @@ TRAINING_PARAMS = [
     ]),
     dbc.FormGroup([
         dbc.Label('Learning Rate'),
-        dbc.Input(id='learning_rate', type="float", value=0.001)
+        dbc.Input(id={'type': 'parameter_editor',
+                      'name': 'learning_rate',
+                      'param_key': 'learning_rate',
+                      'layer': 'input'},
+                  type="float",
+                  value=0.001)
     ]),
     dbc.FormGroup([
         dbc.Label('Seed'),
-        dbc.Input(id='seed', type="int", value=0)])
+        dbc.Input(id={'type': 'parameter_editor',
+                      'name': 'seed',
+                      'param_key': 'seed',
+                      'layer': 'input'},
+                  type="int",
+                  value=0)])
 ]
 
 
 TESTING_PARAMS = [
     dbc.FormGroup([
         dbc.Label('Target Width'),
-        dbc.Input(id='target_width', debounce=True, type="int", value=32),
+        dbc.Input(id={'type': 'parameter_editor',
+                      'name': 'target_width',
+                      'param_key': 'target_width',
+                      'layer': 'input'},
+                  debounce=True, type="int", value=32),
     ]),
     dbc.FormGroup([
         dbc.Label('Target Height'),
-        dbc.Input(id='target_height', type="int", value=32),
+        dbc.Input(id={'type': 'parameter_editor',
+                      'name': 'target_height',
+                      'param_key': 'target_height',
+                      'layer': 'input'},
+                  value=32),
     ]),
     dbc.FormGroup([
         dbc.Label('Batch Size'),
-        dcc.Slider(id='batch_size',
-                  min=16,
-                  max=128,
-                  value=32,
-                  step=16,
-                  tooltip={'always_visible': True,
-                           'placement': 'bottom'})
+        dcc.Slider(id={'type': 'parameter_editor',
+                       'name': 'batch_size',
+                       'param_key': 'batch_size',
+                       'layer': 'input'},
+                   min=16,
+                   max=128,
+                   value=32,
+                   step=16,
+                   tooltip={'always_visible': True,
+                            'placement': 'bottom'})
     ]),
     dbc.FormGroup([
         dbc.Label('Seed'),
-        dbc.Input(id='seed', type="int", value=0)
-    ])
+        dbc.Input(id={'type': 'parameter_editor',
+                      'name': 'seed',
+                      'param_key': 'seed',
+                      'layer': 'input'},
+                  type="int",
+                  value=0)])
 ]
 
 
@@ -318,7 +384,7 @@ column_02 = html.Div([
                                tooltip={'always_visible': True, 'placement': 'bottom'})]
                 ), style={'margin-bottom': '0rem', 'align-items': 'center', 'justify-content': 'center'}
             ),
-        dbc.CardFooter(id='latent-size-out')
+        dbc.CardFooter(id='data-size-out')
     ]),
     html.Div(LOSS_PLOT),
     JOB_STATUS,
@@ -344,31 +410,10 @@ app.layout = html.Div(
 
 ##### CALLBACKS ####
 @app.callback(
-    Output('ls_graph', 'src'),
-    Output('latent-size-out', 'children'),
-    Input('latent_dim', 'value'),
-    Input('target_width', 'value'),
-    Input('target_height', 'value')
-)
-def update_latent_space_graph(ls_var, target_width, target_height):
-    '''
-    This callback updates the latent space graph
-    Args:
-        ls_var:         Latent space value
-
-    Returns:
-        bottleneck_graph
-    '''
-    width = DATA['x_train'].shape[1]
-    height = DATA['x_train'].shape[2]
-    return get_bottleneck(ls_var, int(target_width), int(target_height)), 'Data size: '+str(width)+'x'+str(height)
-
-
-@app.callback(
     Output('app-parameters', 'children'),
     Input('model-selection', 'value'),
-    Input('action', 'value'),
-    prevent_intial_call=True)
+    Input('action', 'value')
+)
 def load_parameters_and_content(model_selection, action_selection):
     '''
     This callback dynamically populates the parameters and contents of the website according to the selected action &
@@ -390,46 +435,69 @@ def load_parameters_and_content(model_selection, action_selection):
 @app.callback(
     [Output('orig_img', 'src'),
      Output('rec_img', 'src'),
-     Output('img-slider', 'max')],
+     Output('ls_graph', 'src'),
+     Output('img-slider', 'max'),
+     Output('data-size-out', 'children')],
+    Input({'type': 'parameter_editor', 'param_key': 'latent_dim', 'name': 'latent_dim', 'layer': 'input', 'index': ALL}, 'value'),
+    Input({'type': 'parameter_editor', 'param_key': 'target_width', 'name': 'target_width', 'layer': 'input', 'index': ALL}, 'value'),
+    Input({'type': 'parameter_editor', 'param_key': 'target_height', 'name': 'target_height', 'layer': 'input', 'index': ALL}, 'value'),
     Input('img-slider', 'value'),
     Input('jobs-table', 'selected_rows'),
-    State('action', 'value'),
+    Input('action', 'value'),
     State('jobs-table', 'data'),
+    prevent_initial_call=True
 )
-def refresh_image(img_ind, row, action_selection, data_table):
+def refresh_image(ls_var, target_width, target_height, img_ind, row, action_selection, data_table):
     '''
-    This callback updates the image in the display
+    This callback updates the images in the display
     Args:
+        ls_var:             Latent space value
+        target_width:       Target data width (if resizing)
+        target_height:      Target data height (if resizing)
         img_ind:            Index of image according to the slider value
+        row:                Selected job (model)
         action_selection:   Action selection (train vs test set)
+        data_table:         Data in table of jobs
     Returns:
         img-output:         Output figure
-        img-reconst-output: Reconstructed output (if prediction is selected, ow. input figure)
+        img-reconst-output: Reconstructed output (if prediction is selected, ow. blank image)
         img-slider-max:     Maximum value of the slider according to the dataset (train vs test)
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    try:
-        if ('img-slider.value' in changed_id or 'jobs-table.selected_rows' in changed_id) \
-                and data_table[row[0]]['job_type'] == 'prediction_model':
-            origimg = Image.fromarray((np.squeeze(DATA['x_test'][img_ind]*255)).astype(np.uint8))
-            origimg = plot_figure(origimg)
+    if 'jobs-table.selected_rows' in changed_id:
+        if data_table[row[0]]['job_type'] != 'prediction_model':
+            data_name = 'x_test'
             job_id = data_table[row[0]]['experiment_id']
             reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
             reconstructed_data = np.load(reconstructed_path)
+            reconst_img = Image.fromarray((np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
+            indx = data_table[row[0]]['parameters'].find('Training Parameters :')
+            train_params = json.loads(data_table[row[0]]['parameters'][indx+21:])
+            ls_var = [train_params['latent_dim']]
+            ls_plot = get_bottleneck(ls_var[0], int(target_width[0]), int(target_height[0]))
+    else:
+        if action_selection in ['train_model', 'transfer_learning']:
+            data_name = 'x_train'
             try:
-                recimg = plot_figure(Image.fromarray((np.squeeze(reconstructed_data[img_ind]*255)).astype(np.uint8)))
-            except Exception as e:
-                recimg = plot_figure(Image.fromarray((np.zeros(origimg.size).astype(np.uint8))))
-            slider_max = DATA['x_test'].shape[0] - 1
-            return origimg, recimg, slider_max
-    except Exception as e:
-        print(e)
-    if action_selection in ['train_model', 'transfer_learning']:
-        origimg = Image.fromarray((np.squeeze(DATA['x_train'][img_ind]*255)).astype(np.uint8))
-        recimg = plot_figure(Image.fromarray((np.zeros(origimg.size).astype(np.uint8))))
-        origimg = plot_figure(origimg)
-        slider_max = DATA['x_train'].shape[0] - 1
-    return origimg, recimg,  slider_max
+                ls_plot = get_bottleneck(ls_var[0], int(target_width[0]), int(target_height[0]))
+            except Exception:
+                ls_plot = dash.no_update
+        else:
+            data_name = 'x_test'
+            ls_plot = dash.no_update
+    if type(DATA) == np.ndarray:                        # loading from array
+        origimg = Image.fromarray((np.squeeze(DATA[data_name][img_ind] * 255)).astype(np.uint8))
+        slider_max = DATA[data_name].shape[0] - 1
+    else:                                               # loading from directory
+        origimg = Image.open(DATA[data_name][img_ind])
+        slider_max = len(DATA[data_name])
+    (width, height) = origimg.size
+    data_size = 'Data size: '+str(width)+'x'+str(height)
+    if 'reconst_img' not in locals():
+        reconst_img = Image.fromarray((np.zeros(origimg.size).astype(np.uint8)))
+    origimg = plot_figure(origimg)
+    recimg = plot_figure(reconst_img)
+    return origimg, recimg, ls_plot, slider_max, data_size
 
 
 @app.callback(
@@ -451,11 +519,16 @@ def update_table(n, row, active_cell, close_clicks):
     Args:
         n:              Time intervals that triggers this callback
         row:            Selected row (job)
+        active_cell:    Selected cell in table of jobs
+        close_clicks:   Close pop-up window
     Returns:
         jobs-table:     Updates the job table
-        show-plot:      Shows/hides the loss plot
         loss-plot:      Updates the loss plot according to the job status (logs)
-        results:        Testing results (probability)
+        show-plot:      Shows/hides the loss plot
+        log-modal:      Open/close pop-up window
+        log-display:    Contents of pop-up window
+        jobs-table:     Selects/deselects the active cell in job table. Without this output, the pop-up window will not
+                        close
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'modal-close.n_clicks' in changed_id:
@@ -464,12 +537,15 @@ def update_table(n, row, active_cell, close_clicks):
     data_table = []
     if job_list is not None:
         for job in job_list:
+            params = str(job['container_kwargs']['parameters'])
+            if job['job_type'] != 'train_model':
+                params = params + '\nTraining Parameters: ' + str(job['container_kwargs']['train_params'])
             data_table.insert(0,
                               dict(
                                   job_id=job['uid'],
                                   job_type=job['job_type'],
                                   status=job['status'],
-                                  parameters=str(job['container_kwargs']['parameters']),
+                                  parameters=params,
                                   experiment_id=job['container_kwargs']['experiment_id'],
                                   job_logs=job['container_logs'])
                               )
@@ -486,7 +562,6 @@ def update_table(n, row, active_cell, close_clicks):
             is_open = True
             log_display = dcc.Textarea(value=str(job['container_kwargs']['parameters']),
                                        style={'width': '100%', 'height': '30rem', 'font-family': 'monospace'})
-    style_fig = {'display': 'none'}
     fig = go.Figure(go.Scatter(x=[], y=[]))
     show_plot = False
     if row:
@@ -497,7 +572,6 @@ def update_table(n, row, active_cell, close_clicks):
                 if start > -1 and len(log) > start + 5:
                     fig = generate_loss_plot(log, start)
                     show_plot = True
-                    style_fig = {'width': '100%', 'display': 'block'}
     return data_table, fig, show_plot, is_open, log_display, None
 
 
@@ -529,16 +603,18 @@ def execute(clicks, children, action_selection, job_data, row):
         input_params = {}
         if bool(children):
             for child in children:
-                key = child["props"]["children"][1]["props"]["id"]
+                key = child["props"]["children"][1]["props"]["id"]["param_key"]
                 value = child["props"]["children"][1]["props"]["value"]
                 input_params[key] = value
         json_dict = input_params
+        kwargs = {}
         if action_selection == 'train_model':
             command = "python3 src/train_model.py"
             directories = [DATA_PATH, str(out_path)]
         else:
             training_exp_id = job_data[row[0]]['experiment_id']
             in_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, training_exp_id))
+            kwargs = {'train_params': job_data[row[0]]['parameters']}
         if action_selection == 'prediction_model':
             command = "python3 src/predict_model.py"
             directories = [DATA_PATH, str(in_path) , str(out_path)]
@@ -552,7 +628,8 @@ def execute(clicks, children, action_selection, job_data, row):
                         container_cmd=command,
                         container_kwargs={'parameters': json_dict,
                                           'directories': directories,
-                                          'experiment_id': experiment_id}
+                                          'experiment_id': experiment_id,
+                                          **kwargs}
                         )
         job.launch_job()
         return contents
