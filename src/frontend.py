@@ -464,18 +464,22 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
         img-slider-max:     Maximum value of the slider according to the dataset (train vs test)
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    if 'jobs-table.selected_rows' in changed_id:
+    if 'jobs-table.selected_rows' in changed_id or 'img-slider.value' in changed_id:
         if data_table[row[0]]['job_type'] == 'prediction_model':
             data_name = 'x_test'
             job_id = data_table[row[0]]['experiment_id']
             reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
             reconstructed_data = np.load(reconstructed_path)
             reconst_img = Image.fromarray((np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
-            indx = data_table[row[0]]['parameters'].find('Training Parameters:')
-            params = data_table[row[0]]['parameters'][indx+21:].replace('True', 'true')
-            train_params = json.loads(params.replace('False', 'false'))
-            ls_var = [train_params['latent_dim']]
-            ls_plot = get_bottleneck(ls_var[0], int(target_width[0]), int(target_height[0]))
+            if 'img-slider.value' in changed_id:
+                ls_plot = dash.no_update
+            else:
+                indx = data_table[row[0]]['parameters'].find('Training Parameters:')
+                params = data_table[row[0]]['parameters'][indx+21:].replace('True', 'true')
+                params = params.replace('False', 'false')
+                train_params = json.loads(params.replace('\'', '\"'))
+                ls_var = [train_params['latent_dim']]
+                ls_plot = get_bottleneck(ls_var[0], int(target_width[0]), int(target_height[0]))
     if 'data_name' not in locals():
         if action_selection in ['train_model', 'transfer_learning']:
             data_name = 'x_train'
