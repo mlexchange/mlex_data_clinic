@@ -471,8 +471,9 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
             reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
             reconstructed_data = np.load(reconstructed_path)
             reconst_img = Image.fromarray((np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
-            indx = data_table[row[0]]['parameters'].find('Training Parameters :')
-            train_params = json.loads(data_table[row[0]]['parameters'][indx+21:])
+            indx = data_table[row[0]]['parameters'].find('Training Parameters:')
+            params = data_table[row[0]]['parameters'][indx+21:].replace('True', 'true')
+            train_params = json.loads(params.replace('False', 'false'))
             ls_var = [train_params['latent_dim']]
             ls_plot = get_bottleneck(ls_var[0], int(target_width[0]), int(target_height[0]))
     if 'data_name' not in locals():
@@ -560,7 +561,7 @@ def update_table(n, row, active_cell, close_clicks):
                                        style={'width': '100%', 'height': '30rem', 'font-family':'monospace'})
         if col_log == 'parameters':     # show job parameters
             is_open = True
-            log_display = dcc.Textarea(value=str(job['container_kwargs']['parameters']),
+            log_display = dcc.Textarea(value=data_table[row_log]["parameters"],
                                        style={'width': '100%', 'height': '30rem', 'font-family': 'monospace'})
     fig = go.Figure(go.Scatter(x=[], y=[]))
     show_plot = False
