@@ -628,7 +628,7 @@ def execute(clicks, children, action_selection, job_data, row):
             if type(DATA) == np.ndarray:
                 data_path = DATA_PATH
             else:
-                data_path = DATA_PATH + '/train'
+                data_path = DATA_PATH + '/test'
             command = "python3 src/predict_model.py"
             directories = [data_path, str(in_path) , str(out_path)]
         job = SimpleJob(user=USER,
