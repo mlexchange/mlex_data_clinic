@@ -465,7 +465,7 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'jobs-table.selected_rows' in changed_id:
-        if data_table[row[0]]['job_type'] != 'prediction_model':
+        if data_table[row[0]]['job_type'] == 'prediction_model':
             data_name = 'x_test'
             job_id = data_table[row[0]]['experiment_id']
             reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
@@ -475,7 +475,7 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
             train_params = json.loads(data_table[row[0]]['parameters'][indx+21:])
             ls_var = [train_params['latent_dim']]
             ls_plot = get_bottleneck(ls_var[0], int(target_width[0]), int(target_height[0]))
-    else:
+    if 'data_name' not in locals():
         if action_selection in ['train_model', 'transfer_learning']:
             data_name = 'x_train'
             try:
@@ -609,15 +609,23 @@ def execute(clicks, children, action_selection, job_data, row):
         json_dict = input_params
         kwargs = {}
         if action_selection == 'train_model':
+            if type(DATA) == np.ndarray:
+                data_path = DATA_PATH
+            else:
+                data_path = DATA_PATH + '/train'
             command = "python3 src/train_model.py"
-            directories = [DATA_PATH, str(out_path)]
+            directories = [data_path, str(out_path)]
         else:
             training_exp_id = job_data[row[0]]['experiment_id']
             in_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, training_exp_id))
             kwargs = {'train_params': job_data[row[0]]['parameters']}
         if action_selection == 'prediction_model':
+            if type(DATA) == np.ndarray:
+                data_path = DATA_PATH
+            else:
+                data_path = DATA_PATH + '/train'
             command = "python3 src/predict_model.py"
-            directories = [DATA_PATH, str(in_path) , str(out_path)]
+            directories = [data_path, str(in_path) , str(out_path)]
         job = SimpleJob(user=USER,
                         job_type=action_selection,
                         description='',
