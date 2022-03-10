@@ -465,28 +465,9 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
         img-slider-max:     Maximum value of the slider according to the dataset (train vs test)
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    if 'jobs-table.selected_rows' in changed_id or 'img-slider.value' in changed_id:
-        if row:
-            if data_table[row[0]]['job_type'] == 'prediction_model':
-                data_name = 'x_test'
-                job_id = data_table[row[0]]['experiment_id']
-                reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
-                try:
-                    reconstructed_data = np.load(reconstructed_path)
-                    slider_max = reconstructed_data.shape[0]
-                    img_ind = min(slider_max, img_ind)
-                    reconst_img = Image.fromarray((np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
-                except Exception:
-                    print('Reconstructed images are not ready')
-                indx = data_table[row[0]]['parameters'].find('Training Parameters:')
-                train_params = str_to_dict(data_table[row[0]]['parameters'][indx + 21:])
-                ls_var = int(train_params['latent_dim'])
-                target_width = int(train_params['target_width'])
-                target_height = int(train_params['target_height'])
-                if 'img-slider.value' in changed_id:
-                    ls_plot = dash.no_update
-                else:
-                    ls_plot = get_bottleneck(ls_var, target_width, target_height)
+    # if 'jobs-table.selected_rows' in changed_id or 'img-slider.value' in changed_id:
+    #     if row:
+    #
     if 'data_name' not in locals():
         if action_selection in ['train_model', 'transfer_learning']:
             data_name = 'x_train'
@@ -503,6 +484,27 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
                     target_width = int(train_params['target_width'])
                     target_height = int(train_params['target_height'])
                     ls_plot = get_bottleneck(ls_var, target_width, target_height)
+                else:
+                    data_name = 'x_test'
+                    job_id = data_table[row[0]]['experiment_id']
+                    reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
+                    try:
+                        reconstructed_data = np.load(reconstructed_path)
+                        slider_max = reconstructed_data.shape[0]
+                        img_ind = min(slider_max, img_ind)
+                        reconst_img = Image.fromarray(
+                            (np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
+                    except Exception:
+                        print('Reconstructed images are not ready')
+                    indx = data_table[row[0]]['parameters'].find('Training Parameters:')
+                    train_params = str_to_dict(data_table[row[0]]['parameters'][indx + 21:])
+                    ls_var = int(train_params['latent_dim'])
+                    target_width = int(train_params['target_width'])
+                    target_height = int(train_params['target_height'])
+                    if 'img-slider.value' in changed_id:
+                        ls_plot = dash.no_update
+                    else:
+                        ls_plot = get_bottleneck(ls_var, target_width, target_height)
             else:
                 ls_plot = get_bottleneck(1,1,1, False)
                 target_width = None
