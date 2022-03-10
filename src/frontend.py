@@ -214,22 +214,22 @@ TRAINING_PARAMS = [
 
 
 TESTING_PARAMS = [
-    dbc.FormGroup([
-        dbc.Label('Target Width'),
-        dbc.Input(id={'type': 'parameter_editor',
-                      'name': 'target_width',
-                      'param_key': 'target_width',
-                      'layer': 'input'},
-                  debounce=True, type="int", value=32),
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Target Height'),
-        dbc.Input(id={'type': 'parameter_editor',
-                      'name': 'target_height',
-                      'param_key': 'target_height',
-                      'layer': 'input'},
-                  value=32),
-    ]),
+    # dbc.FormGroup([
+    #     dbc.Label('Target Width'),
+    #     dbc.Input(id={'type': 'parameter_editor',
+    #                   'name': 'target_width',
+    #                   'param_key': 'target_width',
+    #                   'layer': 'input'},
+    #               debounce=True, type="int", value=32),
+    # ]),
+    # dbc.FormGroup([
+    #     dbc.Label('Target Height'),
+    #     dbc.Input(id={'type': 'parameter_editor',
+    #                   'name': 'target_height',
+    #                   'param_key': 'target_height',
+    #                   'layer': 'input'},
+    #               value=32),
+    # ]),
     dbc.FormGroup([
         dbc.Label('Batch Size'),
         dcc.Slider(id={'type': 'parameter_editor',
@@ -464,11 +464,6 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
         img-reconst-output: Reconstructed output (if prediction is selected, ow. blank image)
         img-slider-max:     Maximum value of the slider according to the dataset (train vs test)
     '''
-    try:
-        target_width = int(target_width[0])
-        target_height = int(target_height[0])
-    except Exception as e:
-        print(e)
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'jobs-table.selected_rows' in changed_id or 'img-slider.value' in changed_id:
         if row:
@@ -480,15 +475,15 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
                 slider_max = reconstructed_data.shape[0]
                 img_ind = min(slider_max, img_ind)
                 reconst_img = Image.fromarray((np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
+                indx = data_table[row[0]]['parameters'].find('Training Parameters:')
+                # test_params = str_to_dict(data_table[row[0]]['parameters'][:indx])
+                train_params = str_to_dict(data_table[row[0]]['parameters'][indx + 21:])
+                ls_var = int(train_params['latent_dim'])
+                target_width = int(train_params['target_width'])
+                target_height = int(train_params['target_height'])
                 if 'img-slider.value' in changed_id:
                     ls_plot = dash.no_update
                 else:
-                    indx = data_table[row[0]]['parameters'].find('Training Parameters:')
-                    test_params = str_to_dict(data_table[row[0]]['parameters'][:indx])
-                    train_params = str_to_dict(data_table[row[0]]['parameters'][indx+21:])
-                    ls_var = int(train_params['latent_dim'])
-                    target_width = int(test_params['target_width'])
-                    target_height = int(test_params['target_height'])
                     ls_plot = get_bottleneck(ls_var, target_width, target_height)
     if 'data_name' not in locals():
         if action_selection in ['train_model', 'transfer_learning']:
@@ -500,6 +495,8 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
         else:
             data_name = 'x_test'
             ls_plot = dash.no_update
+            data_size = 'Original Image: (' + str(width) + 'x' + str(height) + \
+                        '). Choose a trained model to update the graph'
     if type(DATA) != dict:                        # loading from array
         slider_max = DATA[data_name].shape[0] - 1
         img_ind = min(slider_max, img_ind)
@@ -511,10 +508,14 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
     (width, height) = origimg.size
     if 'reconst_img' not in locals():
         reconst_img = Image.fromarray((np.zeros(origimg.size).astype(np.uint8)))
-    data_size = 'Original Image: (' + str(width) + 'x' + str(height) + '), Resized Image: (' + \
+    data_size = 'Original Image: (' + str(width) + 'x' + str(height) + '). Resized Image: (' + \
                 str(target_width) + 'x' + str(target_height) + ')'
-    origimg = plot_figure(origimg.resize((target_width, target_height)))
-    recimg = plot_figure(reconst_img.resize((target_width, target_height)))
+    try:
+        origimg = plot_figure(origimg.resize((target_width, target_height)))
+        recimg = plot_figure(reconst_img.resize((target_width, target_height)))
+    except Exception:
+        origimg = plot_figure(origimg)
+        recimg = plot_figure(reconst_img)
     return origimg, recimg, ls_plot, slider_max, img_ind, data_size
 
 
@@ -637,6 +638,9 @@ def execute(clicks, children, action_selection, job_data, row):
             training_exp_id = job_data[row[0]]['experiment_id']
             in_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, training_exp_id))
             kwargs = {'train_params': job_data[row[0]]['parameters']}
+            train_params = str_to_dict(job_data[row[0]]['parameters'])
+            json_dict['target_width'] = train_params['target_width']
+            json_dict['target_height'] = train_params['target_height']
         if action_selection == 'prediction_model':
             if type(DATA) != dict:
                 data_path = DATA_PATH
