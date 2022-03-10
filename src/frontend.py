@@ -464,6 +464,11 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
         img-reconst-output: Reconstructed output (if prediction is selected, ow. blank image)
         img-slider-max:     Maximum value of the slider according to the dataset (train vs test)
     '''
+    try:
+        target_width = int(target_width[0])
+        target_height = int(target_height[0])
+    except Exception as e:
+        print(e)
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'jobs-table.selected_rows' in changed_id or 'img-slider.value' in changed_id:
         if row:
@@ -506,8 +511,6 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
     (width, height) = origimg.size
     if 'reconst_img' not in locals():
         reconst_img = Image.fromarray((np.zeros(origimg.size).astype(np.uint8)))
-        target_width = int(target_width[0])
-        target_height = int(target_height[0])
     data_size = 'Original Image: (' + str(width) + 'x' + str(height) + '), Resized Image: (' + \
                 str(target_width) + 'x' + str(target_height) + ')'
     origimg = plot_figure(origimg.resize((target_width, target_height)))

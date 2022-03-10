@@ -79,9 +79,9 @@ def plot_figure(image):
         plot in base64 format
     '''
     try:
-        w,h = image.size
+        h,w = image.size
     except Exception:
-        w,h,c = image.size
+        h,w,c = image.size
     fig = px.imshow(image, height=200, width=200*w/h)
     fig.update_xaxes(showgrid=False,
                      showticklabels=False,
