@@ -469,11 +469,11 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
         if row:
             if data_table[row[0]]['job_type'] == 'prediction_model':
                 data_name = 'x_test'
-                slider_max = DATA[data_name].shape[0] - 1
-                img_ind = min(slider_max, img_ind)
                 job_id = data_table[row[0]]['experiment_id']
                 reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
                 reconstructed_data = np.load(reconstructed_path)
+                slider_max = reconstructed_data.shape[0]
+                img_ind = min(slider_max, img_ind)
                 reconst_img = Image.fromarray((np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
                 if 'img-slider.value' in changed_id:
                     ls_plot = dash.no_update
@@ -481,9 +481,9 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
                     indx = data_table[row[0]]['parameters'].find('Training Parameters:')
                     test_params = str_to_dict(data_table[row[0]]['parameters'][:indx])
                     train_params = str_to_dict(data_table[row[0]]['parameters'][indx+21:])
-                    ls_var = train_params['latent_dim']
-                    target_width = test_params['target_width']
-                    target_height = test_params['target_height']
+                    ls_var = int(train_params['latent_dim'])
+                    target_width = int(test_params['target_width'])
+                    target_height = int(test_params['target_height'])
                     ls_plot = get_bottleneck(ls_var, target_width, target_height)
     if 'data_name' not in locals():
         if action_selection in ['train_model', 'transfer_learning']:
@@ -495,7 +495,7 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
         else:
             data_name = 'x_test'
             ls_plot = dash.no_update
-    if type(DATA) != str:                        # loading from array
+    if type(DATA) != dict:                        # loading from array
         slider_max = DATA[data_name].shape[0] - 1
         img_ind = min(slider_max, img_ind)
         origimg = Image.fromarray((np.squeeze(DATA[data_name][img_ind] * 255)).astype(np.uint8))
@@ -504,12 +504,12 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
         img_ind = min(slider_max, img_ind)
         origimg = Image.open(DATA[data_name][img_ind])
     (width, height) = origimg.size
-    data_size = 'Data size: '+str(width)+'x'+str(height)
+    data_size = 'Original Image: '+str(width)+'x'+str(height) + '\nResized Image: '+str(target_width)+str(target_height)
     if 'reconst_img' not in locals():
         reconst_img = Image.fromarray((np.zeros(origimg.size).astype(np.uint8)))
-    origimg = plot_figure(origimg)
-    recimg = plot_figure(reconst_img)
-    return origimg, recimg, ls_plot, slider_max, data_size
+    origimg = plot_figure(origimg.resize(target_width, target_height))
+    recimg = plot_figure(reconst_img.resize(target_width, target_height))
+    return origimg, recimg, ls_plot, slider_max, img_ind, data_size
 
 
 @app.callback(
@@ -621,7 +621,7 @@ def execute(clicks, children, action_selection, job_data, row):
         json_dict = input_params
         kwargs = {}
         if action_selection == 'train_model':
-            if type(DATA) != str:
+            if type(DATA) != dict:
                 data_path = DATA_PATH
             else:
                 data_path = DATA_PATH + '/train'
@@ -632,7 +632,7 @@ def execute(clicks, children, action_selection, job_data, row):
             in_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, training_exp_id))
             kwargs = {'train_params': job_data[row[0]]['parameters']}
         if action_selection == 'prediction_model':
-            if type(DATA) != str:
+            if type(DATA) != dict:
                 data_path = DATA_PATH
             else:
                 data_path = DATA_PATH + '/test'
