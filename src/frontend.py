@@ -476,7 +476,6 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
                 img_ind = min(slider_max, img_ind)
                 reconst_img = Image.fromarray((np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
                 indx = data_table[row[0]]['parameters'].find('Training Parameters:')
-                # test_params = str_to_dict(data_table[row[0]]['parameters'][:indx])
                 train_params = str_to_dict(data_table[row[0]]['parameters'][indx + 21:])
                 ls_var = int(train_params['latent_dim'])
                 target_width = int(train_params['target_width'])
@@ -488,15 +487,20 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
     if 'data_name' not in locals():
         if action_selection in ['train_model', 'transfer_learning']:
             data_name = 'x_train'
-            try:
-                ls_plot = get_bottleneck(ls_var[0], int(target_width[0]), int(target_height[0]))
-            except Exception:
-                ls_plot = dash.no_update
+            ls_var = ls_var[0]
+            target_width = target_width[0]
+            target_height = target_height[0]
         else:
-            data_name = 'x_test'
-            ls_plot = dash.no_update
-            data_size = 'Original Image: (' + str(width) + 'x' + str(height) + \
-                        '). Choose a trained model to update the graph'
+            data_name = 'y_test'
+            if row:
+                if data_table[row[0]]['job_type'] == 'train_model':
+                    train_params = str_to_dict(data_table[row[0]]['parameters'])
+                    ls_var = int(train_params['latent_dim'])
+                    target_width = int(train_params['target_width'])
+                    target_height = int(train_params['target_height'])
+            else:
+                ls_plot = dash.no_update
+                target_width = None
     if type(DATA) != dict:                        # loading from array
         slider_max = DATA[data_name].shape[0] - 1
         img_ind = min(slider_max, img_ind)
@@ -508,15 +512,47 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
     (width, height) = origimg.size
     if 'reconst_img' not in locals():
         reconst_img = Image.fromarray((np.zeros(origimg.size).astype(np.uint8)))
-    data_size = 'Original Image: (' + str(width) + 'x' + str(height) + '). Resized Image: (' + \
-                str(target_width) + 'x' + str(target_height) + ')'
-    try:
+    if target_width:
         origimg = plot_figure(origimg.resize((target_width, target_height)))
         recimg = plot_figure(reconst_img.resize((target_width, target_height)))
-    except Exception:
+    else:
         origimg = plot_figure(origimg)
         recimg = plot_figure(reconst_img)
+        data_size = 'Original Image: (' + str(width) + 'x' + str(height) + '). Resized Image: (' + \
+                    str(target_width) + 'x' + str(target_height) + ')'
     return origimg, recimg, ls_plot, slider_max, img_ind, data_size
+    # if 'data_name' not in locals():
+    #     if action_selection in ['train_model', 'transfer_learning']:
+    #         data_name = 'x_train'
+    #         try:
+    #             ls_plot = get_bottleneck(ls_var[0], int(target_width[0]), int(target_height[0]))
+    #         except Exception:
+    #             ls_plot = dash.no_update
+    #     else:
+    #         data_name = 'x_test'
+    #         ls_plot = dash.no_update
+    #         data_size = 'Original Image: (' + str(width) + 'x' + str(height) + \
+    #                     '). Choose a trained model to update the graph'
+    # if type(DATA) != dict:                        # loading from array
+    #     slider_max = DATA[data_name].shape[0] - 1
+    #     img_ind = min(slider_max, img_ind)
+    #     origimg = Image.fromarray((np.squeeze(DATA[data_name][img_ind] * 255)).astype(np.uint8))
+    # else:                                               # loading from directory
+    #     slider_max = len(DATA[data_name]) - 1
+    #     img_ind = min(slider_max, img_ind)
+    #     origimg = Image.open(DATA[data_name][img_ind])
+    # (width, height) = origimg.size
+    # if 'reconst_img' not in locals():
+    #     reconst_img = Image.fromarray((np.zeros(origimg.size).astype(np.uint8)))
+    # try:
+    #     origimg = plot_figure(origimg.resize((target_width, target_height)))
+    #     recimg = plot_figure(reconst_img.resize((target_width, target_height)))
+    # except Exception:
+    #     origimg = plot_figure(origimg)
+    #     recimg = plot_figure(reconst_img)
+    #     data_size = 'Original Image: (' + str(width) + 'x' + str(height) + '). Resized Image: (' + \
+    #                 str(target_width) + 'x' + str(target_height) + ')'
+    # return origimg, recimg, ls_plot, slider_max, img_ind, data_size
 
 
 @app.callback(
