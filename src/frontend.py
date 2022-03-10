@@ -365,7 +365,7 @@ column_02 = html.Div([
             dbc.CardBody(
                 dbc.Col(
                     [dbc.Row([
-                        html.Img(id='orig_img', title="Original Image",
+                        html.Img(id='orig_img', title="Input Image",
                                  style={'width':'15vw', 'height': '200px', 'padding':'0px', 'display': 'inline-block'}),
                         html.Img(id='ls_graph', title='',
                                  style={'width':'30vw', 'height': '200px', 'padding':'0px', 'display': 'inline-block'}),
@@ -373,7 +373,7 @@ column_02 = html.Div([
                                  style={'width':'15vw', 'height': '200px', 'padding':'0px', 'display': 'inline-block'})
                         ], align="center", justify='center'),
                     dbc.Row([
-                        dbc.Col(dbc.Row(html.P('Original Image'), align="center", justify='center'), width=3),
+                        dbc.Col(dbc.Row(html.P('Input Image'), align="center", justify='center'), width=3),
                         dbc.Col(dbc.Row(html.P('Latent Space'), align="center", justify='center')),
                         dbc.Col(dbc.Row(html.P('Reconstructed Image') ,align="center", justify='center'), width=3),
                         ], align="center", justify='center'),
@@ -471,10 +471,10 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
                 data_name = 'x_test'
                 job_id = data_table[row[0]]['experiment_id']
                 reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
-                reconstructed_data = np.load(reconstructed_path)
-                slider_max = reconstructed_data.shape[0]
-                img_ind = min(slider_max, img_ind)
                 try:
+                    reconstructed_data = np.load(reconstructed_path)
+                    slider_max = reconstructed_data.shape[0]
+                    img_ind = min(slider_max, img_ind)
                     reconst_img = Image.fromarray((np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
                 except Exception:
                     print('Reconstructed images are not ready')
