@@ -507,8 +507,8 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
     data_size = 'Original Image: '+str(width)+'x'+str(height) + '\nResized Image: '+str(target_width)+str(target_height)
     if 'reconst_img' not in locals():
         reconst_img = Image.fromarray((np.zeros(origimg.size).astype(np.uint8)))
-    origimg = plot_figure(origimg.resize(target_width, target_height))
-    recimg = plot_figure(reconst_img.resize(target_width, target_height))
+    origimg = plot_figure(origimg.resize((target_width, target_height)))
+    recimg = plot_figure(reconst_img.resize((target_width, target_height)))
     return origimg, recimg, ls_plot, slider_max, img_ind, data_size
 
 
