@@ -98,13 +98,14 @@ def plot_figure(image):
     return "data:image/png;base64,{}".format(png_base64)
 
 
-def get_bottleneck(ls_var, width, height):
+def get_bottleneck(ls_var, width, height, annotations=True):
     '''
     Plots the latent space representation
     Args:
-        ls_var:     latent space value
-        width:      data width
-        height:     data height
+        ls_var:         latent space value
+        width:          data width
+        height:         data height
+        annotations:    Bool
     Returns:
         plot with graphical representation of the latent space in base64 format
     '''
@@ -128,9 +129,10 @@ def get_bottleneck(ls_var, width, height):
                   fillcolor="RoyalBlue",
                   line_color="RoyalBlue")
     fig.update_traces(marker_size=1, hoverinfo='skip')
-    fig.add_annotation(x=-187, y=-25, text=annotation1, textangle=270, font={'size': 28})
-    fig.add_annotation(x=199, y=-25, text=annotation1, textangle=270, font={'size': 28})
-    fig.add_annotation(x=-10, y=0, text=annotation2, textangle=270, font={'size': 28}, showarrow=False)
+    if annotations:
+        fig.add_annotation(x=-187, y=-25, text=annotation1, textangle=270, font={'size': 28})
+        fig.add_annotation(x=199, y=-25, text=annotation1, textangle=270, font={'size': 28})
+        fig.add_annotation(x=-10, y=0, text=annotation2, textangle=270, font={'size': 28}, showarrow=False)
     fig.update_xaxes(range=[-200,200],
                      showgrid=False,
                      showticklabels=False,
