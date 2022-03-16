@@ -18,8 +18,8 @@ import templates
 
 ### GLOBAL VARIABLES AND DATA LOADING
 DATA_DIR = str(os.environ['DATA_DIR'])
-# DATA_PATH = "data/mixed_small_32x32.npz"
-DATA_PATH = 'data'
+DATA_PATH = "data/mixed_small_32x32.npz"
+# DATA_PATH = 'data'
 if os.path.splitext(DATA_PATH)[-1] == '.npz':
     DATA = np.load(DATA_PATH)   # making reference dataset
 else:
