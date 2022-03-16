@@ -523,12 +523,12 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
         origimg = plot_figure(origimg.resize((target_width, target_height)))
         recimg = plot_figure(reconst_img.resize((target_width, target_height)))
         data_size = 'Original Image: (' + str(width) + 'x' + str(height) + '). Resized Image: (' + \
-                    str(target_width) + 'x' + str(target_height) + ')'
+                    str(target_width) + 'x' + str(target_height) + ').'
     else:
         origimg = plot_figure(origimg)
         recimg = plot_figure(reconst_img)
         data_size = 'Original Image: (' + str(width) + 'x' + str(height) + \
-                    '). Choose a trained model to update the graph'
+                    '). Choose a trained model to update the graph.'
     return origimg, recimg, ls_plot, slider_max, img_ind, data_size
 
 

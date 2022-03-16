@@ -11,9 +11,11 @@ services:
     command: "python src/frontend.py"
     environment:
       DATA_DIR: "/data/tanchavez/Datasets/scattering"
+      #      DATA_DIR: "/data/tanchavez/Datasets/born"
     volumes:
       - ${PWD}:/app/work
       - /data/tanchavez/Datasets/scattering:/app/work/data
+        #      - /data/tanchavez/Datasets/born:/app/work/data
     ports:
       - "8052:8052"
     networks:
