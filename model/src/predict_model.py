@@ -58,6 +58,7 @@ if __name__ == '__main__':
     dist_matrix = pd.DataFrame(dist_matrix)
     if len(filenames) > 0:
         dist_matrix['filename'] = filenames
+        dist_matrix.set_index('filename', inplace=True)
     dist_matrix.to_csv(args.output_dir + '/dist_matrix.csv', index=False)
 
     # Reconstructed images

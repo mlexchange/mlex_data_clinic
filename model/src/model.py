@@ -242,7 +242,7 @@ class Autoencoder(pl.LightningModule):
         validation_loss = self.validation_loss
         self.train_loss = 0
         self.validation_loss = 0
-        print(current_epoch, ' ', train_loss / num_batches, ' ', validation_loss, flush=True)
+        print(current_epoch, train_loss / num_batches, validation_loss, flush=True)
 
     def on_validation_epoch_end(self):
         num_batches = self.trainer.num_val_batches[0]  # may be a list[int]
