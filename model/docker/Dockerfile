@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
          libxext6 \
          libxrender-dev \
          ffmpeg  \
+         tree \
          graphviz \
     python3-pip &&\
     pip install --upgrade pip

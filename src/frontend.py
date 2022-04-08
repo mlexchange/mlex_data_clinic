@@ -12,7 +12,9 @@ import plotly.graph_objects as go
 import uuid
 
 from helper_utils import SimpleJob
-from helper_utils import plot_figure, get_bottleneck, get_job, generate_loss_plot, load_from_dir, str_to_dict
+from helper_utils import plot_figure, get_bottleneck, get_job, generate_loss_plot, load_from_dir, str_to_dict, \
+                         model_list_GET_call, get_gui_components
+from kwarg_editor import JSONParameterEditor
 import templates
 
 
@@ -26,6 +28,7 @@ else:
     DATA = load_from_dir(DATA_PATH)
 MODEL_DATABASE = {"The Model": "path-to-model"} # hardcoded model database as dict
 USER = 'admin'
+MODELS = model_list_GET_call()
 
 
 #### SETUP DASH APP ####
@@ -36,223 +39,6 @@ app.title = "MLExchange | Data Clinic"
 
 ### BEGIN DASH CODE ###
 header = templates.header()
-
-
-# Training Parameters
-TRAINING_PARAMS = [
-    dbc.FormGroup([
-        dbc.Label('Target Width'),
-        dbc.Input(id={'type': 'parameter_editor',
-                      'name': 'target_width',
-                      'param_key': 'target_width',
-                      'layer': 'input',
-                      'index': 0},
-                  debounce=True, type="int", value=32),
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Target Height'),
-        dbc.Input(id={'type': 'parameter_editor',
-                      'name': 'target_height',
-                      'param_key': 'target_height',
-                      'layer': 'input',
-                      'index': 0},
-                  debounce=True, type="int", value=32),
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Latent Dimension'),
-        dcc.Slider(id={'type': 'parameter_editor',
-                      'name': 'latent_dim',
-                      'param_key': 'latent_dim',
-                      'layer': 'input',
-                       'index': 0},
-                  min=0,
-                  max=1000,
-                  value=32,
-                  step=1,
-                  tooltip={'always_visible': True,
-                           'placement': 'bottom'})
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Shuffle Training Data'),
-        dbc.RadioItems(
-            id={'type': 'parameter_editor',
-                'name': 'shuffle',
-                'param_key': 'shuffle',
-                'layer': 'input'},
-            options=[
-               {'label': 'True', 'value': True},
-               {'label': 'False', 'value': False},
-            ],
-            value = True
-        )
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Batch Size'),
-        dcc.Slider(id={'type': 'parameter_editor',
-                      'name': 'batch_size',
-                      'param_key': 'batch_size',
-                      'layer': 'input'},
-                  min=16,
-                  max=128,
-                  value=32,
-                  step=16,
-                  tooltip={'always_visible': True,
-                           'placement': 'bottom'})
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Validation Percentage'),
-        dcc.Slider(id={'type': 'parameter_editor',
-                      'name': 'val_pct',
-                      'param_key': 'val_pct',
-                      'layer': 'input'},
-                  min=0,
-                  max=100,
-                  value=20,
-                  step=5,
-                  tooltip={'always_visible': True,
-                           'placement': 'bottom'})
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Base Channel Size'),
-        dcc.Slider(id={'type': 'parameter_editor',
-                      'name': 'base_channel_size',
-                      'param_key': 'base_channel_size',
-                      'layer': 'input'},
-                  min=0,
-                  max=1000,
-                  value=32,
-                  step=1,
-                  tooltip={'always_visible': True,
-                           'placement': 'bottom'})
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Number of epochs'),
-        dcc.Slider(id={'type': 'parameter_editor',
-                      'name': 'num_epochs',
-                      'param_key': 'num_epochs',
-                      'layer': 'input'},
-                   min=1,
-                   max=1000,
-                   value=3,
-                   tooltip={'always_visible': True,
-                            'placement': 'bottom'})
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Optimizer'),
-        dcc.Dropdown(
-            id={'type': 'parameter_editor',
-                      'name': 'optimizer',
-                      'param_key': 'optimizer',
-                      'layer': 'input'},
-            options=[
-                {'label': 'Adadelta', 'value': 'Adadelta'},
-                {'label': 'Adagrad', 'value': 'Adagrad'},
-                {'label': 'Adam', 'value': 'Adam'},
-                {'label': 'AdamW', 'value': 'AdamW'},
-                {'label': 'SparseAdam', 'value': 'SparseAdam'},
-                {'label': 'Adamax', 'value': 'Adamax'},
-                {'label': 'ASGD', 'value': 'ASGD'},
-                {'label': 'LBFGS', 'value': 'LBFGS'},
-                {'label': 'RMSprop', 'value': 'RMSprop'},
-                {'label': 'Rprop', 'value': 'Rprop'},
-                {'label': 'SGD', 'value': 'SGD'}
-            ],
-            value = 'Adam'
-        )
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Criterion'),
-        dcc.Dropdown(
-            id={'type': 'parameter_editor',
-                      'name': 'criterion',
-                      'param_key': 'criterion',
-                      'layer': 'input'},
-            options=[
-                {'label': 'L1Loss', 'value': 'L1Loss'},
-                {'label': 'MSELoss', 'value': 'MSELoss'},
-                {'label': 'CrossEntropyLoss', 'value': 'CrossEntropyLoss'},
-                {'label': 'CTCLoss', 'value': 'CTCLoss'},
-                {'label': 'NLLLoss', 'value': 'NLLLoss'},
-                {'label': 'PoissonNLLLoss', 'value': 'PoissonNLLLoss'},
-                {'label': 'GaussianNLLLoss', 'value': 'GaussianNLLLoss'},
-                {'label': 'KLDivLoss', 'value': 'KLDivLoss'},
-                {'label': 'BCELoss', 'value': 'BCELoss'},
-                {'label': 'BCEWithLogitsLoss', 'value': 'BCEWithLogitsLoss'},
-                {'label': 'MarginRankingLoss', 'value': 'MarginRankingLoss'},
-                {'label': 'HingeEnbeddingLoss', 'value': 'HingeEnbeddingLoss'},
-                {'label': 'MultiLabelMarginLoss', 'value': 'MultiLabelMarginLoss'},
-                {'label': 'HuberLoss', 'value': 'HuberLoss'},
-                {'label': 'SmoothL1Loss', 'value': 'SmoothL1Loss'},
-                {'label': 'SoftMarginLoss', 'value': 'SoftMarginLoss'},
-                {'label': 'MutiLabelSoftMarginLoss', 'value': 'MutiLabelSoftMarginLoss'},
-                {'label': 'CosineEmbeddingLoss', 'value': 'CosineEmbeddingLoss'},
-                {'label': 'MultiMarginLoss', 'value': 'MultiMarginLoss'},
-                {'label': 'TripletMarginLoss', 'value': 'TripletMarginLoss'},
-                {'label': 'TripletMarginWithDistanceLoss', 'value': 'TripletMarginWithDistanceLoss'}
-            ],
-            value = 'MSELoss'
-        )
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Learning Rate'),
-        dbc.Input(id={'type': 'parameter_editor',
-                      'name': 'learning_rate',
-                      'param_key': 'learning_rate',
-                      'layer': 'input'},
-                  type="float",
-                  value=0.001)
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Seed'),
-        dbc.Input(id={'type': 'parameter_editor',
-                      'name': 'seed',
-                      'param_key': 'seed',
-                      'layer': 'input'},
-                  type="int",
-                  value=0)])
-]
-
-
-TESTING_PARAMS = [
-    # dbc.FormGroup([
-    #     dbc.Label('Target Width'),
-    #     dbc.Input(id={'type': 'parameter_editor',
-    #                   'name': 'target_width',
-    #                   'param_key': 'target_width',
-    #                   'layer': 'input'},
-    #               debounce=True, type="int", value=32),
-    # ]),
-    # dbc.FormGroup([
-    #     dbc.Label('Target Height'),
-    #     dbc.Input(id={'type': 'parameter_editor',
-    #                   'name': 'target_height',
-    #                   'param_key': 'target_height',
-    #                   'layer': 'input'},
-    #               value=32),
-    # ]),
-    dbc.FormGroup([
-        dbc.Label('Batch Size'),
-        dcc.Slider(id={'type': 'parameter_editor',
-                       'name': 'batch_size',
-                       'param_key': 'batch_size',
-                       'layer': 'input'},
-                   min=16,
-                   max=128,
-                   value=32,
-                   step=16,
-                   tooltip={'always_visible': True,
-                            'placement': 'bottom'})
-    ]),
-    dbc.FormGroup([
-        dbc.Label('Seed'),
-        dbc.Input(id={'type': 'parameter_editor',
-                      'name': 'seed',
-                      'param_key': 'seed',
-                      'layer': 'input'},
-                  type="int",
-                  value=0)])
-]
-
 
 SIDEBAR = [
     dbc.Card(
@@ -275,9 +61,8 @@ SIDEBAR = [
                     dbc.Label('Model'),
                     dcc.Dropdown(
                         id='model-selection',
-                        options=[
-                            {'label': 'PyTorch Autoencoder', 'value': 'pytorch-auto'}],
-                        value='pytorch-auto')
+                        options=MODELS,
+                        value=MODELS[0]['value'])
                 ])
             ])
         ]
@@ -333,12 +118,12 @@ JOB_STATUS = dbc.Card(
                         fixed_rows={'headers': True},
                         css=[{"selector": ".show-hide", "rule": "display: none"}],
                         style_data_conditional=[
-                            {'if': {'column_id': 'status', 'filter_query': '{status} = completed'},
+                            {'if': {'column_id': 'status', 'filter_query': '{status} = complete'},
                              'backgroundColor': 'green',
                              'color': 'white'},
                             {'if': {'column_id': 'status', 'filter_query': '{status} = failed'},
                              'backgroundColor': 'red',
-                             'color': 'white'}
+                             'color': 'white'},
                         ],
                         style_table={'height': '30rem', 'overflowY': 'auto', 'overflowX': 'scroll'}
                     )
@@ -391,6 +176,39 @@ column_02 = html.Div([
     dcc.Interval(id='interval', interval=5 * 1000, n_intervals=0)
 ])
 
+
+RESOURCES_SETUP = html.Div(
+    [
+        dbc.Modal(
+            [
+                dbc.ModalHeader("Resources Setup"),
+                dbc.ModalBody(
+                    children=[
+                        dbc.FormGroup([
+                                dbc.Label('Number of CPUs'),
+                                dbc.Input(id='num-cpus',
+                                          type="int",
+                                          value=1)]),
+                        dbc.FormGroup([
+                                dbc.Label('Number of GPUs'),
+                                dbc.Input(id='num-gpus',
+                                          type="int",
+                                          value=0)])
+                    ]),
+                dbc.ModalFooter(
+                    dbc.Button(
+                        "Submit Job", id="submit", className="ms-auto", n_clicks=0
+                    )
+                ),
+            ],
+            id="resources-setup",
+            centered=True,
+            is_open=False,
+        ),
+    ]
+)
+
+
 ##### DEFINE LAYOUT ####
 app.layout = html.Div(
     [
@@ -401,7 +219,8 @@ app.layout = html.Div(
                     [dbc.Col(SIDEBAR, width=4),
                      dbc.Col(column_02, width=8),
                      html.Div(id='dummy-output')]
-                )
+                ),
+                RESOURCES_SETUP
             ],
             fluid=True
         )
@@ -424,12 +243,12 @@ def load_parameters_and_content(model_selection, action_selection):
     Returns:
         app-parameters:     Parameters according to the selected model & action
     '''
-    parameters = []
-    if model_selection == 'pytorch-auto' and action_selection == 'train_model':
-        parameters = TRAINING_PARAMS.copy()
-    if model_selection == 'pytorch-auto' and action_selection == 'prediction_model':
-        parameters = TESTING_PARAMS.copy()
-    return parameters
+    parameters = get_gui_components(model_selection, action_selection)
+    gui_item = JSONParameterEditor(_id={'type': 'parameter_editor'},        # pattern match _id (base id), name
+                                   json_blob=parameters,
+                                   )
+    gui_item.init_callbacks(app)
+    return gui_item
 
 
 @app.callback(
@@ -439,9 +258,9 @@ def load_parameters_and_content(model_selection, action_selection):
      Output('img-slider', 'max'),
      Output('img-slider', 'value'),
      Output('data-size-out', 'children')],
-    Input({'type': 'parameter_editor', 'param_key': 'latent_dim', 'name': 'latent_dim', 'layer': 'input', 'index': ALL}, 'value'),
-    Input({'type': 'parameter_editor', 'param_key': 'target_width', 'name': 'target_width', 'layer': 'input', 'index': ALL}, 'value'),
-    Input({'type': 'parameter_editor', 'param_key': 'target_height', 'name': 'target_height', 'layer': 'input', 'index': ALL}, 'value'),
+    Input({'type': ALL, 'param_key': 'latent_dim', 'name': 'latent_dim', 'layer': 'input'}, 'value'),
+    Input({'type': ALL, 'param_key': 'target_width', 'name': 'target_width'}, 'value'),
+    Input({'type': ALL, 'param_key': 'target_height', 'name': 'target_height'}, 'value'),
     Input('img-slider', 'value'),
     Input('jobs-table', 'selected_rows'),
     Input('action', 'value'),
@@ -471,10 +290,13 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
     if 'data_name' not in locals():
         if action_selection in ['train_model', 'transfer_learning']:
             data_name = 'x_train'
-            ls_var = int(ls_var[0])
-            target_width = int(target_width[0])
-            target_height = int(target_height[0])
-            ls_plot = get_bottleneck(ls_var, target_width, target_height)
+            if len(ls_var)>0:
+                ls_var = int(ls_var[0])
+                target_width = int(target_width[0])
+                target_height = int(target_height[0])
+                ls_plot = get_bottleneck(ls_var, target_width, target_height)
+            else:
+                ls_plot = dash.no_update
         else:
             data_name = 'x_test'
             if row:
@@ -569,17 +391,17 @@ def update_table(n, row, active_cell, close_clicks):
     data_table = []
     if job_list is not None:
         for job in job_list:
-            params = str(job['container_kwargs']['parameters'])
-            if job['job_type'] != 'train_model':
-                params = params + '\nTraining Parameters: ' + str(job['container_kwargs']['train_params'])
+            params = str(job['job_kwargs']['kwargs']['params'])
+            if job['job_kwargs']['kwargs']['job_type'] != 'train_model':
+                params = params + '\nTraining Parameters: ' + str(job['job_kwargs']['kwargs']['train_params'])
             data_table.insert(0,
                               dict(
                                   job_id=job['uid'],
-                                  job_type=job['job_type'],
-                                  status=job['status'],
+                                  job_type=job['job_kwargs']['kwargs']['job_type'],
+                                  status=job['status']['state'],
                                   parameters=params,
-                                  experiment_id=job['container_kwargs']['experiment_id'],
-                                  job_logs=job['container_logs'])
+                                  experiment_id=job['job_kwargs']['kwargs']['experiment_id'],
+                                  job_logs=job['logs'])
                               )
     is_open = dash.no_update
     log_display = dash.no_update
@@ -608,33 +430,42 @@ def update_table(n, row, active_cell, close_clicks):
 
 
 @app.callback(
-    Output('dummy-output', 'children'),
+    Output('resources-setup', 'is_open'),
     Input('execute', 'n_clicks'),
+    Input('submit', 'n_clicks'),
     [State('app-parameters', 'children'),
+     State('num-cpus', 'value'),
+     State('num-gpus', 'value'),
      State('action', 'value'),
      State('jobs-table', 'data'),
      State('jobs-table', 'selected_rows')],
     prevent_intial_call=True)
-def execute(clicks, children, action_selection, job_data, row):
+def submit(execute, submit, children, num_cpus, num_gpus, action_selection, job_data, row):
     '''
     This callback submits a job request to the compute service according to the selected action & model
     Args:
-        clicks:             Execute button triggers this callback
+        execute:            Execute button
+        submit:             Submit button
         children:           Model parameters
+        num_cpus:           Number of CPUs assigned to job
+        num_gpus:           Number of GPUs assigned to job
         action_selection:   Action selected
         job_data:           Lists of jobs
         row:                Selected row (job)
     Returns:
         None
     '''
-    if clicks > 0:
+    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+    if 'execute.n_clicks' in changed_id:
+        return True
+    if 'submit.n_clicks' in changed_id:
         contents = []
         experiment_id = str(uuid.uuid4())
         out_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, experiment_id))
         out_path.mkdir(parents=True, exist_ok=True)
         input_params = {}
         if bool(children):
-            for child in children:
+            for child in children['props']['children']:
                 key = child["props"]["children"][1]["props"]["id"]["param_key"]
                 value = child["props"]["children"][1]["props"]["value"]
                 input_params[key] = value
@@ -661,22 +492,17 @@ def execute(clicks, children, action_selection, job_data, row):
                 data_path = DATA_PATH + '/test'
             command = "python3 src/predict_model.py"
             directories = [data_path, str(in_path) , str(out_path)]
-        job = SimpleJob(user=USER,
-                        job_type=action_selection,
-                        description='',
-                        deploy_location='local',
-                        gpu=True,
-                        data_uri='{}'.format(DATA_DIR),
-                        container_uri='mlexchange/unsupervised-classifier',
-                        container_cmd=command,
-                        container_kwargs={'parameters': json_dict,
-                                          'directories': directories,
-                                          'experiment_id': experiment_id,
-                                          **kwargs}
-                        )
-        job.launch_job()
-        return contents
-    return []
+        job = SimpleJob(service_type='backend',
+                        working_directory='{}'.format(DATA_DIR),
+                        uri='mlexchange/unsupervised-classifier',
+                        cmd= ' '.join([command, str(json_dict)] + directories),
+                        kwargs = {'job_type': action_selection,
+                                  'experiment_id': experiment_id,
+                                  'params': json_dict,
+                                  **kwargs})
+        job.submit(USER, num_cpus, num_gpus)
+        return False
+    return False
 
 
 if __name__ == "__main__":
