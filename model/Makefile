@@ -19,6 +19,9 @@ test:
 build_docker: 
 	docker build -t ${IMG_WEB_SVC} -f ./docker/Dockerfile .
 
+build_docker_arm64: 
+	docker build -t ${IMG_WEB_SVC} -f ./docker/Dockerfile_arm64 .
+
 run_docker:
 	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it --gpus all -v ${PWD}:/app/work/ -v /data/tanchavez/Datasets/scattering:/app/work/data -p 8888:8888 ${IMG_WEB_SVC}
 

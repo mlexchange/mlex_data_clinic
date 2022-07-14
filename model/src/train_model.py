@@ -45,7 +45,13 @@ if __name__ == '__main__':
                                                                                        NUM_WORKERS,
                                                                                        train_parameters.shuffle,
                                                                                        target_size,
-                                                                                       'x_train',
+                                                                                       train_parameters.horz_flip_prob,
+                                                                                       train_parameters.vert_flip_prob,
+                                                                                       train_parameters.brightness,
+                                                                                       train_parameters.contrast,
+                                                                                       train_parameters.saturation,
+                                                                                       train_parameters.hue,
+                                                                                       train_parameters.data_key,
                                                                                        train_parameters.val_pct)
 
     trainer = pl.Trainer(default_root_dir=args.output_dir,
@@ -58,6 +64,7 @@ if __name__ == '__main__':
                                                     save_weights_only=True)])
 
     model = Autoencoder(base_channel_size=train_parameters.base_channel_size,
+                        depth=train_parameters.depth,
                         latent_dim=train_parameters.latent_dim,
                         num_input_channels=input_channels,
                         optimizer=train_parameters.optimizer,

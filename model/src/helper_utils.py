@@ -1,8 +1,12 @@
 import os
 
+import einops
 from PIL import Image
 import numpy as np
 import torch
+from torchvision import datasets, transforms
+
+from model import CustomTensorDataset
 
 
 def split_dataset(dataset, val_pct):
@@ -22,6 +26,7 @@ def split_dataset(dataset, val_pct):
 
 
 def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_size=None,
+                    horz_flip_prob=0, vert_flip_prob=0, brightness=0, contrast=0, saturation=0, hue=0,
                     data_keyword=None, val_pct=None):
     '''
     This function creates the dataloaders in PyTorch from directory or npy files
@@ -31,6 +36,12 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
         num_workers:    [int] Number of workers
         shuffle:        [bool] Shuffle data
         target_size:    [tuple] Target size
+        horz_flip_prob: [float] Probability of horizontal flip
+        vert_flip_prob: [float] Probability of vertical flip
+        brightness:     [float]
+        contrast:
+        saturation:
+        hue:
         data_keyword:   [str] Keyword for data upload if npz file
         val_pct:        [int] Percentage for validation [0-100]
     Returns:
@@ -44,6 +55,7 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
                 data = np.array(file[data_keyword])
         else:
             data = np.load(data_path)   # one single datafile
+        data = data.astype('float32')
     else:
         data = []
         for dirpath, subdirs, files in os.walk(data_path):
@@ -57,20 +69,28 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
     if len(data.shape) == 3:
         data = np.expand_dims(data, 3)
     dataset = torch.tensor(data)
-    dataset = dataset.transpose(1, 3)
+    dataset = einops.rearrange(dataset, 'n x y c -> n c x y')
     if target_size:
         dataset = torch.nn.functional.interpolate(dataset, target_size)
+    data_transform = []
+    if brightness>0 or contrast>0 or saturation>0 or hue>0:
+        data_transform.append(transforms.ColorJitter((0.4,brightness), contrast, saturation, hue))
+    if horz_flip_prob>0:
+        data_transform.append(transforms.RandomHorizontalFlip(p=horz_flip_prob))
+    if vert_flip_prob>0:
+        data_transform.append(transforms.RandomVerticalFlip(p=vert_flip_prob))
     (input_channels, width, height) = dataset.shape[1:]
+    dataset = CustomTensorDataset((dataset,dataset), transforms.Compose(data_transform))
     if val_pct:
         train_set, val_set = split_dataset(dataset, val_pct)
         train_loader = torch.utils.data.DataLoader(
-            [[train_set[i], train_set[i]] for i in range(len(train_set))],
+            train_set,
             shuffle=shuffle,
             batch_size=batch_size,
             num_workers=num_workers)
         if val_pct > 0:
             val_loader = torch.utils.data.DataLoader(
-                [[val_set[i], val_set[i]] for i in range(len(val_set))],
+                val_set,
                 shuffle=False,
                 batch_size=batch_size,
                 num_workers=num_workers)
@@ -79,7 +99,7 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
             data_loader = [train_loader, None]
     else:
         data_loader = torch.utils.data.DataLoader(
-            [[dataset[i], dataset[i]] for i in range(len(dataset))],
+            dataset,
             shuffle=False,
             batch_size=batch_size,
             num_workers=num_workers)

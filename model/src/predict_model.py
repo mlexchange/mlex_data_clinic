@@ -39,7 +39,7 @@ if __name__ == '__main__':
                                                                                       NUM_WORKERS,
                                                                                       False,
                                                                                       target_size,
-                                                                                      data_keyword='x_test')
+                                                                                      data_keyword=test_parameters.data_key)
 
     model = Autoencoder.load_from_checkpoint(args.model_dir + '/last.ckpt')
 
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     if len(filenames) > 0:
         dist_matrix['filename'] = filenames
         dist_matrix.set_index('filename', inplace=True)
-    dist_matrix.to_csv(args.output_dir + '/dist_matrix.csv', index=False)
+    dist_matrix.to_csv(args.output_dir + '/dist_matrix.csv')
 
     # Reconstructed images
     test_result = trainer.predict(model, dataloaders=test_loader)
