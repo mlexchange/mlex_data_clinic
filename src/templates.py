@@ -1,5 +1,6 @@
 import dash_bootstrap_components as dbc
-from dash import html, dcc
+import dash_html_components as html
+import dash_core_components as dcc
 
 button_github = dbc.Button(
     "View Code on github",

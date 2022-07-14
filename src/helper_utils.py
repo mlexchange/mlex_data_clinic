@@ -42,8 +42,9 @@ class SimpleJob:
             Workflow status
         '''
         workflow = {'user_uid': user,
-                    'workflow_type': 'serial',
                     'job_list': [self.__dict__],
+                    'host_list': ['mlsandbox.als.lbl.gov', 'local.als.lbl.gov', 'vaughan.als.lbl.gov'],
+                    'dependencies': {'0': []},
                     'requirements': {'num_processors': num_cpus,
                                      'num_gpus': num_gpus,
                                      'num_nodes': 1}}
@@ -205,6 +206,7 @@ def generate_loss_plot(log, start):
 def str_to_dict(text):
     text = text.replace('True', 'true')
     text = text.replace('False', 'false')
+    text = text.replace('None', 'null')
     return json.loads(text.replace('\'', '\"'))
 
 
@@ -234,4 +236,19 @@ def get_gui_components(model_uid, comp_group):
     url = f'http://content-api:8000/api/v0/models/{model_uid}/model/{comp_group}/gui_params'
     response = urllib.request.urlopen(url)
     return json.loads(response.read())
-    
+
+
+def init_counter(username):
+    job_list = get_job(username, 'data_clinic')
+    job_types = ['train_model', 'prediction_model']
+    counters = [-1, -1]
+    if job_list is not None:
+        for indx, job_type in enumerate(job_types):
+            for job in reversed(job_list):
+                last_job = job['job_kwargs']['kwargs']['job_type'].split()
+                value = int(last_job[-1])
+                last_job = ' '.join(last_job[0:-1])
+                if last_job == job_type:
+                    counters[indx] = value
+                    break
+    return counters

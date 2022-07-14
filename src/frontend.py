@@ -1,41 +1,52 @@
-import os
 import json
+import os
+import logging
+import pathlib
+import shutil
+import zipfile
+
 import dash
-from dash import Dash, html, dcc, dcc, dash_table, MATCH, ALL
-from dash.dependencies import Input, Output, State
-from dash.exceptions import PreventUpdate
+import dash_html_components as html
+import dash_core_components as dcc
+from dash.dependencies import Input, Output, State, MATCH, ALL
+import dash_uploader as du
+import dash_table
 import dash_bootstrap_components as dbc
 import numpy as np
-import pathlib
+import pandas as pd
 import PIL.Image as Image
 import plotly.graph_objects as go
 import uuid
 
+from file_manager import filename_list, move_a_file, move_dir, add_paths_from_dir, \
+                         check_duplicate_filename, docker_to_local_path, local_to_docker_path, file_explorer
 from helper_utils import SimpleJob
 from helper_utils import plot_figure, get_bottleneck, get_job, generate_loss_plot, load_from_dir, str_to_dict, \
-                         model_list_GET_call, get_gui_components
-from kwarg_editor import JSONParameterEditor
+                         model_list_GET_call, get_gui_components, init_counter
+from assets.kwarg_editor import JSONParameterEditor
 import templates
 
 
 ### GLOBAL VARIABLES AND DATA LOADING
 DATA_DIR = str(os.environ['DATA_DIR'])
-DATA_PATH = "data/mixed_small_32x32.npz"
-# DATA_PATH = 'data'
-if os.path.splitext(DATA_PATH)[-1] == '.npz':
-    DATA = np.load(DATA_PATH)   # making reference dataset
-else:
-    DATA = load_from_dir(DATA_PATH)
 MODEL_DATABASE = {"The Model": "path-to-model"} # hardcoded model database as dict
 USER = 'admin'
 MODELS = model_list_GET_call()
-
+DOCKER_DATA = pathlib.Path.home() / 'data'
+LOCAL_DATA = str(os.environ['DATA_DIR'])
+DOCKER_HOME = str(DOCKER_DATA) + '/'
+LOCAL_HOME = str(LOCAL_DATA)
+UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
+SUPPORTED_FORMATS = ['tiff', 'tif', 'jpg', 'jpeg', 'png']
 
 #### SETUP DASH APP ####
 external_stylesheets = [dbc.themes.BOOTSTRAP, "../assets/segmentation-style.css"]
-app = Dash(__name__, external_stylesheets=external_stylesheets)#, suppress_callback_exceptions=True)
-server = app.server
-app.title = "MLExchange | Data Clinic"
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets) #, suppress_callback_exceptions=True)
+# server = app.server
+app.title = "Data Clinic"
+app._favicon = 'mlex.ico'
+du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 ### BEGIN DASH CODE ###
 header = templates.header()
@@ -63,6 +74,10 @@ SIDEBAR = [
                         id='model-selection',
                         options=MODELS,
                         value=MODELS[0]['value'])
+                ]),
+                dbc.FormGroup([
+                    dbc.Label('Data'),
+                    file_explorer,
                 ])
             ])
         ]
@@ -78,7 +93,23 @@ SIDEBAR = [
                                      style={'width': '100%', 'justify-content': 'center'})
                           ])
         ]
-    )
+    ),
+    dbc.Modal(
+        [
+            dbc.ModalHeader("Warning"),
+            dbc.ModalBody(id="warning-msg"),
+            dbc.ModalFooter([
+                dbc.Button(
+                    "OK", id="ok-button", color='danger', outline=False,
+                    className="ms-auto", n_clicks=0
+                ),
+            ]),
+        ],
+        id="warning-modal",
+        is_open=False,
+    ),
+    dcc.Store(id='warning-cause', data=''),
+    dcc.Store(id='counters', data=init_counter(USER))
 ]
 
 
@@ -97,6 +128,7 @@ JOB_STATUS = dbc.Card(
             dbc.CardHeader("List of Jobs"),
             dbc.CardBody(
                 children=[
+                    dbc.Button("Deselect Row", id="deselect-row"),
                     dash_table.DataTable(
                         id='jobs-table',
                         columns=[
@@ -105,10 +137,11 @@ JOB_STATUS = dbc.Card(
                             {'name': 'Status', 'id': 'status'},
                             {'name': 'Parameters', 'id': 'parameters'},
                             {'name': 'Experiment ID', 'id': 'experiment_id'},
+                            {'name': 'Dataset', 'id': 'dataset'},
                             {'name': 'Logs', 'id': 'job_logs'}
                         ],
                         data=[],
-                        hidden_columns=['job_id', 'experiment_id'],
+                        hidden_columns=['job_id', 'experiment_id', 'dataset'],
                         row_selectable='single',
                         style_cell={'padding': '1rem',
                                     'textAlign': 'left',
@@ -173,7 +206,7 @@ column_02 = html.Div([
     ]),
     html.Div(LOSS_PLOT),
     JOB_STATUS,
-    dcc.Interval(id='interval', interval=5 * 1000, n_intervals=0)
+    dcc.Interval(id='interval', interval=5 * 1000, n_intervals=0),
 ])
 
 
@@ -227,7 +260,240 @@ app.layout = html.Div(
     ]
 )
 
-##### CALLBACKS ####
+
+##### FILE MANAGER CALLBACKS ####
+@app.callback(
+    Output("collapse", "is_open"),
+    Input("collapse-button", "n_clicks"),
+    Input("import-dir", "n_clicks"),
+    State("collapse", "is_open")
+)
+def toggle_collapse(collapse_button, import_button, is_open):
+    '''
+    This callback toggles the file manager
+    Args:
+        collapse_button:    "Open File Manager" button
+        import_button:      Import button
+        is_open:            Open/close File Manager modal state
+    '''
+    if collapse_button or import_button:
+        return not is_open
+    return is_open
+
+
+@app.callback(
+    Output("warning-modal", "is_open"),
+    Output("warning-msg", "children"),
+    Input("warning-cause", "data"),
+    Input("ok-button", "n_clicks"),
+    State("warning-modal", "is_open"),
+    prevent_initial_call=True
+)
+def toggle_warning_modal(warning_cause, ok_n_clicks, is_open):
+    '''
+    This callback toggles a warning/error message
+    Args:
+        warning_cause:      Cause that triggered the warning
+        ok_n_clicks:        Close the warning
+        is_open:            Close/open state of the warning
+    '''
+    if ok_n_clicks:
+        return not is_open, ""
+    if warning_cause == 'wrong_dataset':
+        return not is_open, "The dataset you have selected is not supported. Please select (1) a data directory " \
+                        "where each subfolder corresponds to a given category, OR (2) an NPZ file."
+    if warning_cause == 'different_size':
+        return not is_open, "The number of images and labels do not match. Please select a different dataset."
+    else:
+        return not is_open, ""
+
+
+@app.callback(
+    Output("modal", "is_open"),
+    Input("delete-files", "n_clicks"),
+    Input("confirm-delete", "n_clicks"),
+    State("modal", "is_open")
+)
+def toggle_modal(n1, n2, is_open):
+    '''
+    This callback toggles a confirmation message for file manager
+    Args:
+        n1:         Delete files button
+        n2:         Confirm delete button
+        is_open:    Open/close confirmation modal state
+    '''
+    if n1 or n2:
+        return not is_open
+    return is_open
+
+
+@app.callback(
+    Output("npz-modal", "is_open"),
+    Output("npz-img-key", "options"),
+
+    Input("import-dir", "n_clicks"),
+    Input("confirm-import", "n_clicks"),
+    Input("npz-img-key", "value"),
+    State("npz-modal", "is_open"),
+    State("docker-file-paths", "data"),
+)
+def toggle_modal_keyword(import_button, confirm_import, img_key, is_open, npz_path):
+    '''
+    This callback opens the modal to select the keywords within the NPZ file. When a keyword is selected for images or
+    labels, this option is removed from the options of the other.
+    Args:
+        import_button:      Import button
+        confirm_import:     Confirm import button
+        img_key:            Selected keyword for the images
+        is_open:            Open/close status of the modal
+        npz_path:           Path to NPZ file
+    Returns:
+        toggle_modal:       Open/close modal
+        img_options:        Keyword options for images
+    '''
+    img_options = []
+    label_options = []
+    toggle_modal = is_open
+    changed_id = dash.callback_context.triggered[0]['prop_id']
+    if npz_path:
+        if npz_path[0].split('.')[-1] == 'npz':
+            data = np.load(npz_path[0])
+            img_key_list = list(data.keys())
+            df_img = pd.DataFrame({'c': img_key_list})
+            img_options = [{'label':i, 'value':i} for i in df_img['c']]
+            toggle_modal = True
+    if is_open and 'confirm-import.n_clicks' in changed_id:
+        toggle_modal = False
+    return toggle_modal, img_options
+
+
+@app.callback(
+    Output('dummy-data', 'data'),
+    Input('dash-uploader', 'isCompleted'),
+    State('dash-uploader', 'fileNames')
+)
+def upload_zip(iscompleted, upload_filename):
+    '''
+    This callback uploads a ZIP file
+    Args:
+        iscompleted:        The upload operation is completed (bool)
+        upload_filename:    Filename of the uploaded content
+    '''
+    if not iscompleted:
+        return 0
+    if upload_filename is not None:
+        path_to_zip_file = pathlib.Path(UPLOAD_FOLDER_ROOT) / upload_filename[0]
+        if upload_filename[0].split('.')[-1] == 'zip':  # unzip files and delete zip file
+            zip_ref = zipfile.ZipFile(path_to_zip_file)  # create zipfile object
+            path_to_folder = pathlib.Path(UPLOAD_FOLDER_ROOT) / upload_filename[0].split('.')[-2]
+            if (upload_filename[0].split('.')[-2] + '/') in zip_ref.namelist():
+                zip_ref.extractall(pathlib.Path(UPLOAD_FOLDER_ROOT))  # extract file to dir
+            else:
+                zip_ref.extractall(path_to_folder)
+            zip_ref.close()  # close file
+            os.remove(path_to_zip_file)
+    return 0
+
+
+@app.callback(
+    Output('files-table', 'data'),
+    Output('docker-file-paths', 'data'),
+    Output('data-path', 'data'),
+
+    Input('browse-format', 'value'),
+    Input('browse-dir', 'n_clicks'),
+    Input('import-dir', 'n_clicks'),
+    Input('confirm-delete', 'n_clicks'),
+    Input('move-dir', 'n_clicks'),
+    Input('files-table', 'selected_rows'),
+    Input('data-path', 'data'),
+    Input('import-format', 'value'),
+    Input('my-toggle-switch', 'value'),
+    Input('jobs-table', 'selected_rows'),
+
+    State('dest-dir-name', 'value'),
+    State('jobs-table', 'data')
+)
+def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_clicks, move_dir_n_clicks, rows,
+                 selected_paths, import_format, docker_path, job_rows, dest, job_data):
+    '''
+    This callback displays manages the actions of file manager
+    Args:
+        browse_format:      File extension to browse
+        browse_n_clicks:    Browse button
+        import_n_clicks:    Import button
+        delete_n_clicks:    Delete button
+        move_dir_n_clicks:  Move button
+        rows:               Selected rows
+        selected_paths:     Selected paths in cache
+        import_format:      File extension to import
+        docker_path:        [bool] docker vs local path
+        job_rows:           Selected rows in job table. If it's not a "training" model, it will load its results
+                            instead of the data uploaded through File Manager. This is so that the user can observe
+                            previous evaluation results
+        dest:               Destination path
+        job_data:           Data in job table
+    Returns
+        files:              Filenames to be displayed in File Manager according to browse_format from docker/local path
+        list_filename:      List of selected filenames in the directory AND SUBDIRECTORIES FROM DOCKER PATH
+        selected_files:     List of selected filename FROM DOCKER PATH (no subdirectories)
+        selected_row:       Selected row in jobs table
+    '''
+    changed_id = dash.callback_context.triggered[0]['prop_id']
+
+    supported_formats = []
+    import_format = import_format.split(',')
+    if import_format[0] == '*':
+        supported_formats = ['tiff', 'tif', 'jpg', 'jpeg', 'png']
+    else:
+        for ext in import_format:
+            supported_formats.append(ext.split('.')[1])
+
+    files = []
+    if browse_n_clicks or import_n_clicks:
+        files = filename_list(DOCKER_DATA, browse_format)
+
+    selected_files = []
+    list_filename = []
+    if bool(rows):
+        for row in rows:
+            file_path = files[row]
+            selected_files.append(file_path)
+            if file_path['file_type'] == 'dir':
+                list_filename = add_paths_from_dir(file_path['file_path'], supported_formats, list_filename)
+            else:
+                list_filename.append(file_path['file_path'])
+
+    if browse_n_clicks and changed_id == 'confirm-delete.n_clicks':
+        for filepath in selected_files:
+            if os.path.isdir(filepath['file_path']):
+                shutil.rmtree(filepath['file_path'])
+            else:
+                os.remove(filepath['file_path'])
+        selected_files = []
+        files = filename_list(DOCKER_DATA, browse_format)
+
+    if browse_n_clicks and changed_id == 'move-dir.n_clicks':
+        if dest is None:
+            dest = ''
+        destination = DOCKER_DATA / dest
+        destination.mkdir(parents=True, exist_ok=True)
+        if bool(rows):
+            sources = selected_paths
+            for source in sources:
+                if os.path.isdir(source['file_path']):
+                    move_dir(source['file_path'], str(destination))
+                    shutil.rmtree(source['file_path'])
+                else:
+                    move_a_file(source['file_path'], str(destination))
+            selected_files = []
+            files = filename_list(DOCKER_DATA, browse_format)
+    if not docker_path:
+        files = docker_to_local_path(files, DOCKER_HOME, LOCAL_HOME)
+    return files, list_filename, selected_files #, []
+
+
+##### DATA CLINIC CALLBACKS  ####
 @app.callback(
     Output('app-parameters', 'children'),
     Input('model-selection', 'value'),
@@ -239,7 +505,7 @@ def load_parameters_and_content(model_selection, action_selection):
     model.
     Args:
         model_selection:    Selected model (from content registry)
-        action_selection:   Selected action (pre-defined actions in MLCoach)
+        action_selection:   Selected action (pre-defined actions in Data Clinic)
     Returns:
         app-parameters:     Parameters according to the selected model & action
     '''
@@ -252,92 +518,112 @@ def load_parameters_and_content(model_selection, action_selection):
 
 
 @app.callback(
-    [Output('orig_img', 'src'),
-     Output('rec_img', 'src'),
-     Output('ls_graph', 'src'),
-     Output('img-slider', 'max'),
-     Output('img-slider', 'value'),
-     Output('data-size-out', 'children')],
+    Output('orig_img', 'src'),
+    Output('rec_img', 'src'),
+    Output('ls_graph', 'src'),
+    Output('img-slider', 'max'),
+    Output('img-slider', 'value'),
+    Output('data-size-out', 'children'),
+
+    Input('import-dir', 'n_clicks'),
+    Input('confirm-import', 'n_clicks'),
     Input({'type': ALL, 'param_key': 'latent_dim', 'name': 'latent_dim', 'layer': 'input'}, 'value'),
     Input({'type': ALL, 'param_key': 'target_width', 'name': 'target_width'}, 'value'),
     Input({'type': ALL, 'param_key': 'target_height', 'name': 'target_height'}, 'value'),
     Input('img-slider', 'value'),
-    Input('jobs-table', 'selected_rows'),
     Input('action', 'value'),
+    Input('jobs-table', 'selected_rows'),
+
     State('jobs-table', 'data'),
-    prevent_initial_call=True
+    State("docker-file-paths", "data"),
+    State("npz-img-key", "value"),
+    State("npz-modal", "is_open"),
 )
-def refresh_image(ls_var, target_width, target_height, img_ind, row, action_selection, data_table):
+def refresh_image(import_dir, confirm_import, ls_var, target_width, target_height, img_ind, action_selection, row,
+                  data_table, filenames, img_keyword, npz_modal):
     '''
     This callback updates the images in the display
     Args:
+        import_dir:         Import button
+        confirm_import:     Confirm import button
         ls_var:             Latent space value
         target_width:       Target data width (if resizing)
         target_height:      Target data height (if resizing)
         img_ind:            Index of image according to the slider value
         row:                Selected job (model)
-        action_selection:   Action selection (train vs test set)
         data_table:         Data in table of jobs
+        filenames:          Selected data files
+        img_keyword:        Keyword for images in NPZ file
+        npz_modal:          Open/close status of NPZ modal
+        action_selection:   Action selection (train vs test)
     Returns:
         img-output:         Output figure
         img-reconst-output: Reconstructed output (if prediction is selected, ow. blank image)
+        latent-space-plot:  Graphical representation of latent space definition
         img-slider-max:     Maximum value of the slider according to the dataset (train vs test)
+        img-slider-value:   Value of the slider according to the dataset length
+        data-size-out:      Size of uploaded data
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    # if 'jobs-table.selected_rows' in changed_id or 'img-slider.value' in changed_id:
-    #     if row:
-    #
-    if 'data_name' not in locals():
-        if action_selection in ['train_model', 'transfer_learning']:
-            data_name = 'x_train'
-            if len(ls_var)>0:
-                ls_var = int(ls_var[0])
-                target_width = int(target_width[0])
-                target_height = int(target_height[0])
-                ls_plot = get_bottleneck(ls_var, target_width, target_height)
-            else:
-                ls_plot = dash.no_update
+    if action_selection in ['train_model', 'transfer_learning']:
+        if len(ls_var) > 0:
+            ls_var = int(ls_var[0])
+            target_width = int(target_width[0])
+            target_height = int(target_height[0])
+            ls_plot = get_bottleneck(ls_var, target_width, target_height)
         else:
-            data_name = 'x_test'
-            if row:
-                if data_table[row[0]]['job_type'] == 'train_model':
-                    train_params = str_to_dict(data_table[row[0]]['parameters'])
-                    ls_var = int(train_params['latent_dim'])
-                    target_width = int(train_params['target_width'])
-                    target_height = int(train_params['target_height'])
-                    ls_plot = get_bottleneck(ls_var, target_width, target_height)
-                else:
-                    data_name = 'x_test'
-                    job_id = data_table[row[0]]['experiment_id']
-                    reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
-                    try:
-                        reconstructed_data = np.load(reconstructed_path)
-                        slider_max = reconstructed_data.shape[0]
-                        img_ind = min(slider_max, img_ind)
-                        reconst_img = Image.fromarray(
-                            (np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
-                    except Exception:
-                        print('Reconstructed images are not ready')
-                    indx = data_table[row[0]]['parameters'].find('Training Parameters:')
-                    train_params = str_to_dict(data_table[row[0]]['parameters'][indx + 21:])
-                    ls_var = int(train_params['latent_dim'])
-                    target_width = int(train_params['target_width'])
-                    target_height = int(train_params['target_height'])
-                    if 'img-slider.value' in changed_id:
-                        ls_plot = dash.no_update
-                    else:
-                        ls_plot = get_bottleneck(ls_var, target_width, target_height)
+            ls_plot = dash.no_update
+    else:
+        ls_plot = get_bottleneck(1, 1, 1, False)
+        target_width = None
+    if row:
+        if data_table[row[0]]['job_type'].split(' ')[0] == 'train_model':
+            if action_selection == 'prediction_model':
+                train_params = str_to_dict(data_table[row[0]]['parameters'])
+                ls_var = int(train_params['latent_dim'])
+                target_width = int(train_params['target_width'])
+                target_height = int(train_params['target_height'])
+                ls_plot = get_bottleneck(ls_var, target_width, target_height)
+        else:
+            filenames = data_table[row[0]]['dataset']
+            job_id = data_table[row[0]]['experiment_id']
+            reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
+            try:
+                reconstructed_data = np.load(reconstructed_path)
+                slider_max = reconstructed_data.shape[0]
+                img_ind = min(slider_max, img_ind)
+                reconst_img = Image.fromarray((np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
+            except Exception:
+                print('Reconstructed images are not ready')
+            indx = data_table[row[0]]['parameters'].find('Training Parameters:')
+            train_params = str_to_dict(data_table[row[0]]['parameters'][indx + 21:])
+            ls_var = int(train_params['latent_dim'])
+            target_width = int(train_params['target_width'])
+            target_height = int(train_params['target_height'])
+            if 'img-slider.value' in changed_id:
+                ls_plot = dash.no_update
             else:
-                ls_plot = get_bottleneck(1,1,1, False)
-                target_width = None
-    if type(DATA) != dict:                        # loading from array
-        slider_max = DATA[data_name].shape[0] - 1
-        img_ind = min(slider_max, img_ind)
-        origimg = Image.fromarray((np.squeeze(DATA[data_name][img_ind] * 255)).astype(np.uint8))
-    else:                                               # loading from directory
-        slider_max = len(DATA[data_name]) - 1
-        img_ind = min(slider_max, img_ind)
-        origimg = Image.open(DATA[data_name][img_ind])
+                ls_plot = get_bottleneck(ls_var, target_width, target_height)
+
+    if len(filenames) > 0:
+        try:
+            if filenames[0].split('.')[-1] == 'npz':    # npz file
+                if img_keyword is not None:
+                    data_npz = np.load(filenames[0])
+                    data_npy = np.squeeze(data_npz[img_keyword])
+                    slider_max = len(data_npy) - 1
+                    img_ind = min(slider_max, img_ind)
+                    origimg = data_npy[img_ind]
+            else:                                       # directory
+                slider_max = len(filenames) - 1
+                if img_ind > slider_max:
+                    img_ind = 0
+                origimg = Image.open(filenames[img_ind])
+        except Exception as e:
+            print(f'Exception in refresh_image callback {e}')
+    if 'origimg' not in locals():
+        origimg = Image.fromarray((np.zeros((32,32)).astype(np.uint8)))
+        slider_max = 0
     (width, height) = origimg.size
     if 'reconst_img' not in locals():
         reconst_img = Image.fromarray((np.zeros(origimg.size).astype(np.uint8)))
@@ -361,28 +647,34 @@ def refresh_image(ls_var, target_width, target_height, img_ind, row, action_sele
     Output('log-modal', 'is_open'),
     Output('log-display', 'children'),
     Output('jobs-table', 'active_cell'),
+
     Input('interval', 'n_intervals'),
     Input('jobs-table', 'selected_rows'),
     Input('jobs-table', 'active_cell'),
     Input('modal-close', 'n_clicks'),
+
+    State('jobs-table', 'data'),
+    State('loss-plot', 'figure'),
     prevent_initial_call=True
 )
-def update_table(n, row, active_cell, close_clicks):
+def update_table(n, row, active_cell, close_clicks, current_job_table, current_fig):
     '''
     This callback updates the job table, loss plot, and results according to the job status in the compute service.
     Args:
-        n:              Time intervals that triggers this callback
-        row:            Selected row (job)
-        active_cell:    Selected cell in table of jobs
-        close_clicks:   Close pop-up window
+        n:                  Time intervals that triggers this callback
+        row:                Selected row (job)
+        active_cell:        Selected cell in table of jobs
+        close_clicks:       Close pop-up window
+        current_job_table:  Current job table
+        current_fig:        Current loss plot
     Returns:
-        jobs-table:     Updates the job table
-        loss-plot:      Updates the loss plot according to the job status (logs)
-        show-plot:      Shows/hides the loss plot
-        log-modal:      Open/close pop-up window
-        log-display:    Contents of pop-up window
-        jobs-table:     Selects/deselects the active cell in job table. Without this output, the pop-up window will not
-                        close
+        jobs-table:         Updates the job table
+        loss-plot:          Updates the loss plot according to the job status (logs)
+        show-plot:          Shows/hides the loss plot
+        log-modal:          Open/close pop-up window
+        log-display:        Contents of pop-up window
+        jobs-table:         Selects/deselects the active cell in job table. Without this output, the pop-up window will not
+                            close
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'modal-close.n_clicks' in changed_id:
@@ -392,7 +684,7 @@ def update_table(n, row, active_cell, close_clicks):
     if job_list is not None:
         for job in job_list:
             params = str(job['job_kwargs']['kwargs']['params'])
-            if job['job_kwargs']['kwargs']['job_type'] != 'train_model':
+            if job['job_kwargs']['kwargs']['job_type'].split(' ')[0] != 'train_model':
                 params = params + '\nTraining Parameters: ' + str(job['job_kwargs']['kwargs']['train_params'])
             data_table.insert(0,
                               dict(
@@ -401,6 +693,7 @@ def update_table(n, row, active_cell, close_clicks):
                                   status=job['status']['state'],
                                   parameters=params,
                                   experiment_id=job['job_kwargs']['kwargs']['experiment_id'],
+                                  dataset=job['job_kwargs']['kwargs']['dataset'],
                                   job_logs=job['logs'])
                               )
     is_open = dash.no_update
@@ -421,26 +714,51 @@ def update_table(n, row, active_cell, close_clicks):
     if row:
         log = data_table[row[0]]["job_logs"]
         if log:
-            if data_table[row[0]]['job_type'] == 'train_model':
+            if data_table[row[0]]['job_type'].split(' ')[0] == 'train_model':
                 start = log.find('epoch')
                 if start > -1 and len(log) > start + 5:
                     fig = generate_loss_plot(log, start)
                     show_plot = True
+    if current_fig:
+        if current_fig['data'][0]['x']== list(fig['data'][0]['x']):
+            fig = dash.no_update
+    if data_table == current_job_table:
+        data_table = dash.no_update
     return data_table, fig, show_plot, is_open, log_display, None
 
 
 @app.callback(
+    Output('jobs-table', 'selected_rows'),
+    Input('deselect-row', 'n_clicks'),
+    prevent_intial_call=True
+)
+def deselect_row(n_click):
+    '''
+    This callback deselects the row in the data table
+    '''
+    return []
+
+
+@app.callback(
     Output('resources-setup', 'is_open'),
+    Output('counters', 'data'),
+
     Input('execute', 'n_clicks'),
     Input('submit', 'n_clicks'),
-    [State('app-parameters', 'children'),
-     State('num-cpus', 'value'),
-     State('num-gpus', 'value'),
-     State('action', 'value'),
-     State('jobs-table', 'data'),
-     State('jobs-table', 'selected_rows')],
+
+    State('app-parameters', 'children'),
+    State('num-cpus', 'value'),
+    State('num-gpus', 'value'),
+    State('action', 'value'),
+    State('jobs-table', 'data'),
+    State('jobs-table', 'selected_rows'),
+    State('data-path', 'data'),
+    State("docker-file-paths", "data"),
+    State("counters", "data"),
+    State("npz-img-key", "value"),
     prevent_intial_call=True)
-def submit(execute, submit, children, num_cpus, num_gpus, action_selection, job_data, row):
+def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job_data, row, data_path, filenames,
+            counters, x_key):
     '''
     This callback submits a job request to the compute service according to the selected action & model
     Args:
@@ -452,33 +770,37 @@ def submit(execute, submit, children, num_cpus, num_gpus, action_selection, job_
         action_selection:   Action selected
         job_data:           Lists of jobs
         row:                Selected row (job)
+        data_path:          Local path to data
+        counters:           List of counters to assign a number to each job according to its action (train vs evaluate)
+        filenames:          List of filenames within this dataset
+        x_key:              Keyword for x data in NPZ file
     Returns:
-        None
+        open/close the resources setup modal
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'execute.n_clicks' in changed_id:
-        return True
+        return True, counters
     if 'submit.n_clicks' in changed_id:
-        contents = []
         experiment_id = str(uuid.uuid4())
         out_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, experiment_id))
         out_path.mkdir(parents=True, exist_ok=True)
-        input_params = {}
+        input_params = {'data_key': x_key}
         if bool(children):
             for child in children['props']['children']:
                 key = child["props"]["children"][1]["props"]["id"]["param_key"]
                 value = child["props"]["children"][1]["props"]["value"]
                 input_params[key] = value
+        data_path = data_path[0]['file_path']
         json_dict = input_params
         kwargs = {}
         if action_selection == 'train_model':
-            if type(DATA) != dict:
-                data_path = DATA_PATH
-            else:
-                data_path = DATA_PATH + '/train'
+            counters[0] = counters[0] + 1
+            count = counters[0]
             command = "python3 src/train_model.py"
             directories = [data_path, str(out_path)]
         else:
+            counters[1] = counters[1] + 1
+            count = counters[1]
             training_exp_id = job_data[row[0]]['experiment_id']
             in_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, training_exp_id))
             kwargs = {'train_params': job_data[row[0]]['parameters']}
@@ -486,24 +808,21 @@ def submit(execute, submit, children, num_cpus, num_gpus, action_selection, job_
             json_dict['target_width'] = train_params['target_width']
             json_dict['target_height'] = train_params['target_height']
         if action_selection == 'prediction_model':
-            if type(DATA) != dict:
-                data_path = DATA_PATH
-            else:
-                data_path = DATA_PATH + '/test'
             command = "python3 src/predict_model.py"
             directories = [data_path, str(in_path) , str(out_path)]
         job = SimpleJob(service_type='backend',
                         working_directory='{}'.format(DATA_DIR),
                         uri='mlexchange/unsupervised-classifier',
-                        cmd= ' '.join([command, str(json_dict)] + directories),
-                        kwargs = {'job_type': action_selection,
+                        cmd= ' '.join([command] + directories + ['\''+json.dumps(json_dict)+'\'']),
+                        kwargs = {'job_type': f'{action_selection} {count}',
                                   'experiment_id': experiment_id,
+                                  'dataset': filenames,
                                   'params': json_dict,
                                   **kwargs})
         job.submit(USER, num_cpus, num_gpus)
-        return False
-    return False
+        return False, counters
+    return False, counters
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True, host='0.0.0.0', port=8052)
+    app.run_server(debug=True, host='0.0.0.0', port=8072)

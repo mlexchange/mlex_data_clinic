@@ -16,7 +16,7 @@ import plotly.express as px
 
 from dash.dependencies import Input, ALL, Output, State
 
-from targeted_callbacks import targeted_callback
+from assets.targeted_callbacks import targeted_callback
 
 # Procedural dash form generation
 
