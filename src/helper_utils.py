@@ -17,36 +17,40 @@ import requests
 
 class SimpleJob:
     def __init__(self,
-                 user,
-                 job_type,
-                 description,
-                 deploy_location,
-                 gpu,
-                 data_uri,
-                 container_uri,
-                 container_cmd,
-                 container_kwargs,
+                 service_type,
+                 working_directory,
+                 uri,
+                 cmd,
+                 kwargs = None,
                  mlex_app = 'data_clinic'):
-        self.user = user
         self.mlex_app = mlex_app
-        self.job_type = job_type
-        self.description = description
-        self.deploy_location = deploy_location
-        self.gpu = gpu
-        self.data_uri = data_uri
-        self.container_uri = container_uri
-        self.container_cmd = container_cmd
-        self.container_kwargs = container_kwargs
+        self.service_type = service_type
+        self.working_directory = working_directory
+        self.job_kwargs = {'uri': uri,
+                           'type': 'docker',
+                           'cmd': cmd,
+                           'kwargs': kwargs}
 
-    def launch_job(self):
+    def submit(self, user, num_cpus, num_gpus):
         '''
-        Send job to computing service
+        Sends job to computing service
+        Args:
+            user:       user UID
+            num_cpus:   Number of CPUs
+            num_gpus:   Number of GPUs
         Returns:
-            Job status
+            Workflow status
         '''
-        url = 'http://job-service:8080/api/v0/jobs'
-        return requests.post(url, json=self.__dict__).status_code
-
+        workflow = {'user_uid': user,
+                    'job_list': [self.__dict__],
+                    'host_list': ['mlsandbox.als.lbl.gov', 'local.als.lbl.gov', 'vaughan.als.lbl.gov'],
+                    'dependencies': {'0': []},
+                    'requirements': {'num_processors': num_cpus,
+                                     'num_gpus': num_gpus,
+                                     'num_nodes': 1}}
+        url = 'http://job-service:8080/api/v0/workflows'
+        return requests.post(url, json=workflow).status_code
+    
 
 def load_from_dir(data_path):
     '''
@@ -202,4 +206,49 @@ def generate_loss_plot(log, start):
 def str_to_dict(text):
     text = text.replace('True', 'true')
     text = text.replace('False', 'false')
+    text = text.replace('None', 'null')
     return json.loads(text.replace('\'', '\"'))
+
+
+def model_list_GET_call():
+    """
+    Get a list of algorithms from content registry
+    """
+    url = 'http://content-api:8000/api/v0/models'
+    response = urllib.request.urlopen(url)
+    list = json.loads(response.read())
+    models = []
+    for item in list:
+        if 'data_clinic' in item['application']:
+            models.append({'label': item['name'], 'value': item['content_id']})
+    return models
+
+
+def get_gui_components(model_uid, comp_group):
+    '''
+    Returns the GUI components of the corresponding model and action
+    Args:
+        model_uid:  Model UID
+        comp_group: Action, e.g. training, testing, etc
+    Returns:
+        params:     List of model parameters
+    '''
+    url = f'http://content-api:8000/api/v0/models/{model_uid}/model/{comp_group}/gui_params'
+    response = urllib.request.urlopen(url)
+    return json.loads(response.read())
+
+
+def init_counter(username):
+    job_list = get_job(username, 'data_clinic')
+    job_types = ['train_model', 'prediction_model']
+    counters = [-1, -1]
+    if job_list is not None:
+        for indx, job_type in enumerate(job_types):
+            for job in reversed(job_list):
+                last_job = job['job_kwargs']['kwargs']['job_type'].split()
+                value = int(last_job[-1])
+                last_job = ' '.join(last_job[0:-1])
+                if last_job == job_type:
+                    counters[indx] = value
+                    break
+    return counters

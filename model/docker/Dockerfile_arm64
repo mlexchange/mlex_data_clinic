@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:latest
+FROM kumatea/pytorch:latest
 
 COPY docker/requirements.txt requirements.txt
 

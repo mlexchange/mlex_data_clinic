@@ -4,26 +4,19 @@ services:
   front-end:
     restart: "unless-stopped"
     container_name: "data_clinic"
-    #user: "${UID}:${GID}"
     build:
       context: "."
       dockerfile: "docker/Dockerfile"
     command: "python src/frontend.py"
     environment:
-      DATA_DIR: "/data/tanchavez/Datasets/scattering"
-      #      DATA_DIR: "/data/tanchavez/Datasets/born"
+      DATA_DIR: "${PWD}/data"
     volumes:
       - ${PWD}:/app/work
-      - /data/tanchavez/Datasets/scattering:/app/work/data
-        #      - /data/tanchavez/Datasets/born:/app/work/data
     ports:
-      - "8052:8052"
+      - "8072:8072"
     networks:
       - computing_api_default
-      - model-regist_default
 
 networks:
   computing_api_default:
-    external: true
-  model-regist_default:
     external: true
