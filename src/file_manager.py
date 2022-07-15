@@ -1,6 +1,7 @@
 import copy
 import os
 import pathlib
+import requests
 
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
@@ -15,7 +16,11 @@ DOCKER_HOME = str(DOCKER_DATA) + '/'
 LOCAL_HOME = str(LOCAL_DATA)
 
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
-
+DATAPATH_DEFAULT, FILENAMES_DEFAULT = [], []
+DATAPATH = requests.get(f'http://labelmaker-api:8005/api/v0/import/datapath').json()
+if bool(DATAPATH['datapath']) and os.path.isdir(DATAPATH['datapath'][0]['file_path']):
+    DATAPATH_DEFAULT = DATAPATH['datapath'][0]['file_path']
+    FILENAMES_DEFAULT = DATAPATH['filenames']
 
 # FILES DISPLAY
 file_paths_table = html.Div(
@@ -181,6 +186,28 @@ data_access = html.Div([
 
 file_explorer = html.Div(
     [
+        dbc.Row([
+            dbc.Col(dbc.Button(
+                        "Refresh Images",
+                        id="refresh-data",
+                        size="lg",
+                        className='m-1',
+                        color="secondary",
+                        outline=True,
+                        n_clicks=0,
+                        style={'width': '100%'}), width=6),
+            dbc.Col(dbc.Button(
+                        "Clear Images",
+                        id="clear-data",
+                        size="lg",
+                        className='m-1',
+                        color="secondary",
+                        outline=True,
+                        n_clicks=0,
+                        style={'width': '100%'}), width=6) 
+            ],
+            justify = 'center'
+        ),
         dbc.Button(
             "Open File Manager",
             id="collapse-button",
@@ -215,8 +242,8 @@ file_explorer = html.Div(
            is_open=False,
         ),
         dcc.Store(id='dummy-data', data=[]),
-        dcc.Store(id='docker-file-paths', data=[]),
-        dcc.Store(id='data-path', data=[]),
+        dcc.Store(id='docker-file-paths', data=FILENAMES_DEFAULT),
+        dcc.Store(id='data-path', data=DATAPATH_DEFAULT),
     ]
 )
 
