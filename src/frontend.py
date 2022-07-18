@@ -790,7 +790,10 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
                 key = child["props"]["children"][1]["props"]["id"]["param_key"]
                 value = child["props"]["children"][1]["props"]["value"]
                 input_params[key] = value
-        data_path = data_path[0]['file_path']
+        try:
+            data_path = data_path[0]['file_path']
+        except Exception as e:
+            print(e)
         json_dict = input_params
         kwargs = {}
         if action_selection == 'train_model':
@@ -816,7 +819,7 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
                         cmd= ' '.join([command] + directories + ['\''+json.dumps(json_dict)+'\'']),
                         kwargs = {'job_type': f'{action_selection} {count}',
                                   'experiment_id': experiment_id,
-                                  'dataset': filenames,
+                                  'dataset': data_path,
                                   'params': json_dict,
                                   **kwargs})
         job.submit(USER, num_cpus, num_gpus)
