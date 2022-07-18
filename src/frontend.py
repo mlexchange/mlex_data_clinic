@@ -501,16 +501,10 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
         if bool(datapath['datapath']) and os.path.isdir(datapath['datapath'][0]['file_path']):
             list_filename, selected_files = datapath['filenames'], datapath['datapath'][0]['file_path']
         return files,  list_filename, selected_files
-        
-    elif changed_id == 'import-dir.n_clicks':
-        return files, list_filename, selected_files
-        
     elif changed_id == 'clear-data.n_clicks':
         return [], [], []
-        
-    else:
-        return files, list_filename, selected_files
-    #return files, list_filename, selected_files #, []
+
+    return files, list_filename, selected_files
 
 
 ##### DATA CLINIC CALLBACKS  ####
