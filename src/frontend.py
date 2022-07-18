@@ -4,6 +4,7 @@ import logging
 import pathlib
 import shutil
 import zipfile
+import uuid, requests
 
 import dash
 import dash_html_components as html
@@ -16,7 +17,6 @@ import numpy as np
 import pandas as pd
 import PIL.Image as Image
 import plotly.graph_objects as go
-import uuid
 
 from file_manager import filename_list, move_a_file, move_dir, add_paths_from_dir, \
                          check_duplicate_filename, docker_to_local_path, local_to_docker_path, file_explorer
@@ -410,12 +410,14 @@ def upload_zip(iscompleted, upload_filename):
     Input('import-format', 'value'),
     Input('my-toggle-switch', 'value'),
     Input('jobs-table', 'selected_rows'),
+    Input("clear-data", "n_clicks"),
+    Input("refresh-data", "n_clicks"),
 
     State('dest-dir-name', 'value'),
     State('jobs-table', 'data')
 )
 def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_clicks, move_dir_n_clicks, rows,
-                 selected_paths, import_format, docker_path, job_rows, dest, job_data):
+                 selected_paths, import_format, docker_path, job_rows, clear_data, refresh_data, dest, job_data):
     '''
     This callback displays manages the actions of file manager
     Args:
@@ -433,6 +435,8 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
                             previous evaluation results
         dest:               Destination path
         job_data:           Data in job table
+        clear_data:         Clear the loaded images
+        refresh_data:      Refresh the loaded images
     Returns
         files:              Filenames to be displayed in File Manager according to browse_format from docker/local path
         list_filename:      List of selected filenames in the directory AND SUBDIRECTORIES FROM DOCKER PATH
@@ -490,7 +494,23 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
             files = filename_list(DOCKER_DATA, browse_format)
     if not docker_path:
         files = docker_to_local_path(files, DOCKER_HOME, LOCAL_HOME)
-    return files, list_filename, selected_files #, []
+    
+    if changed_id == 'refresh-data.n_clicks':
+        list_filename, selected_files = [], []
+        datapath = requests.get(f'http://labelmaker-api:8005/api/v0/import/datapath').json()
+        if bool(datapath['datapath']) and os.path.isdir(datapath['datapath'][0]['file_path']):
+            list_filename, selected_files = datapath['filenames'], datapath['datapath'][0]['file_path']
+        return files,  list_filename, selected_files
+        
+    elif changed_id == 'import-dir.n_clicks':
+        return files, list_filename, selected_files
+        
+    elif changed_id == 'clear-data.n_clicks':
+        return [], [], []
+        
+    else:
+        return files, list_filename, selected_files
+    #return files, list_filename, selected_files #, []
 
 
 ##### DATA CLINIC CALLBACKS  ####
@@ -533,9 +553,9 @@ def load_parameters_and_content(model_selection, action_selection):
     Input('img-slider', 'value'),
     Input('action', 'value'),
     Input('jobs-table', 'selected_rows'),
-
-    State('jobs-table', 'data'),
-    State("docker-file-paths", "data"),
+    Input('jobs-table', 'data'),
+    Input("docker-file-paths", "data"),
+    
     State("npz-img-key", "value"),
     State("npz-modal", "is_open"),
 )
@@ -550,7 +570,7 @@ def refresh_image(import_dir, confirm_import, ls_var, target_width, target_heigh
         target_width:       Target data width (if resizing)
         target_height:      Target data height (if resizing)
         img_ind:            Index of image according to the slider value
-        row:                Selected job (model)
+        row:                Selected job (model) 
         data_table:         Data in table of jobs
         filenames:          Selected data files
         img_keyword:        Keyword for images in NPZ file
@@ -637,6 +657,7 @@ def refresh_image(import_dir, confirm_import, ls_var, target_width, target_heigh
         recimg = plot_figure(reconst_img)
         data_size = 'Original Image: (' + str(width) + 'x' + str(height) + \
                     '). Choose a trained model to update the graph.'
+    
     return origimg, recimg, ls_plot, slider_max, img_ind, data_size
 
 
