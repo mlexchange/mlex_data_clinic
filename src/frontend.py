@@ -840,7 +840,7 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
             directories = [data_path, str(in_path) , str(out_path)]
         job = SimpleJob(service_type='backend',
                         working_directory='{}'.format(DATA_DIR),
-                        uri='mlexchange/unsupervised-classifier',
+                        uri='mlexchange1/unsupervised-classifier',
                         cmd= ' '.join([command] + directories + ['\''+json.dumps(json_dict)+'\'']),
                         kwargs = {'job_type': f'{action_selection} {count}',
                                   'experiment_id': experiment_id,
