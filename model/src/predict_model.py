@@ -1,5 +1,6 @@
 import argparse
 import json
+import einops
 import logging
 import numpy as np
 import pandas as pd
@@ -64,5 +65,5 @@ if __name__ == '__main__':
     # Reconstructed images
     test_result = trainer.predict(model, dataloaders=test_loader)
     test_result = torch.cat(test_result)
-    test_result = test_result.transpose(1, 3)
+    test_result = einops.rearrange(test_result, 'n c x y -> n x y c')
     np.save(args.output_dir + '/reconstructed_images', test_result.cpu().detach().numpy())

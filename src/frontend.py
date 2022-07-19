@@ -195,7 +195,7 @@ column_02 = html.Div([
                         dbc.Col(dbc.Row(html.P('Latent Space'), align="center", justify='center')),
                         dbc.Col(dbc.Row(html.P('Reconstructed Image') ,align="center", justify='center'), width=3),
                         ], align="center", justify='center'),
-                    dbc.Label('Image: '),
+                    dbc.Label('Image: ', id='current-image-label'),
                     dcc.Slider(id='img-slider',
                                min=0,
                                value=0,
@@ -509,8 +509,7 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
         return [], [], []
         
     else:
-        return files, list_filename, selected_files
-    #return files, list_filename, selected_files #, []
+        return files, dash.no_update, dash.no_update
 
 
 ##### DATA CLINIC CALLBACKS  ####
@@ -544,6 +543,7 @@ def load_parameters_and_content(model_selection, action_selection):
     Output('img-slider', 'max'),
     Output('img-slider', 'value'),
     Output('data-size-out', 'children'),
+    Output('current-image-label', 'children'),
 
     Input('import-dir', 'n_clicks'),
     Input('confirm-import', 'n_clicks'),
@@ -584,6 +584,7 @@ def refresh_image(import_dir, confirm_import, ls_var, target_width, target_heigh
         img-slider-value:   Value of the slider according to the dataset length
         data-size-out:      Size of uploaded data
     '''
+    current_im_label = ''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if action_selection in ['train_model', 'transfer_learning']:
         if len(ls_var) > 0:
@@ -605,7 +606,8 @@ def refresh_image(import_dir, confirm_import, ls_var, target_width, target_heigh
                 target_height = int(train_params['target_height'])
                 ls_plot = get_bottleneck(ls_var, target_width, target_height)
         else:
-            filenames = data_table[row[0]]['dataset']
+            supported_formats = ['tiff', 'tif', 'jpg', 'jpeg', 'png']
+            filenames = add_paths_from_dir(data_table[row[0]]['dataset'], supported_formats, [])
             job_id = data_table[row[0]]['experiment_id']
             reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
             try:
@@ -629,6 +631,7 @@ def refresh_image(import_dir, confirm_import, ls_var, target_width, target_heigh
         try:
             if filenames[0].split('.')[-1] == 'npz':    # npz file
                 if img_keyword is not None:
+                    current_im_label = filenames[0]
                     data_npz = np.load(filenames[0])
                     data_npy = np.squeeze(data_npz[img_keyword])
                     slider_max = len(data_npy) - 1
@@ -639,6 +642,7 @@ def refresh_image(import_dir, confirm_import, ls_var, target_width, target_heigh
                 if img_ind > slider_max:
                     img_ind = 0
                 origimg = Image.open(filenames[img_ind])
+                current_im_label = filenames[img_ind]
         except Exception as e:
             print(f'Exception in refresh_image callback {e}')
     if 'origimg' not in locals():
@@ -658,7 +662,7 @@ def refresh_image(import_dir, confirm_import, ls_var, target_width, target_heigh
         data_size = 'Original Image: (' + str(width) + 'x' + str(height) + \
                     '). Choose a trained model to update the graph.'
     
-    return origimg, recimg, ls_plot, slider_max, img_ind, data_size
+    return origimg, recimg, ls_plot, slider_max, img_ind, data_size, 'Image: '+current_im_label
 
 
 @app.callback(
@@ -811,7 +815,10 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
                 key = child["props"]["children"][1]["props"]["id"]["param_key"]
                 value = child["props"]["children"][1]["props"]["value"]
                 input_params[key] = value
-        data_path = data_path[0]['file_path']
+        try:
+            data_path = data_path[0]['file_path']
+        except Exception as e:
+            print(e)
         json_dict = input_params
         kwargs = {}
         if action_selection == 'train_model':
@@ -837,7 +844,7 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
                         cmd= ' '.join([command] + directories + ['\''+json.dumps(json_dict)+'\'']),
                         kwargs = {'job_type': f'{action_selection} {count}',
                                   'experiment_id': experiment_id,
-                                  'dataset': filenames,
+                                  'dataset': data_path,
                                   'params': json_dict,
                                   **kwargs})
         job.submit(USER, num_cpus, num_gpus)
