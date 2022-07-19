@@ -22,7 +22,7 @@ README files.
 Finally, you can access Data CLinic at:
 * Dash app: http://localhost:8072/
 
-Please refer to [HowToGuide](/docs/tasks.md#How To Guide) for further instructions on how
+Please refer to [HowToGuide](/docs/tasks) for further instructions on how
 to use this application.
 
 # Model Description
