@@ -606,7 +606,8 @@ def refresh_image(import_dir, confirm_import, ls_var, target_width, target_heigh
                 target_height = int(train_params['target_height'])
                 ls_plot = get_bottleneck(ls_var, target_width, target_height)
         else:
-            filenames = data_table[row[0]]['dataset']
+            supported_formats = ['tiff', 'tif', 'jpg', 'jpeg', 'png']
+            filenames = add_paths_from_dir(data_table[row[0]]['dataset'], supported_formats, [])
             job_id = data_table[row[0]]['experiment_id']
             reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
             try:
