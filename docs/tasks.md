@@ -30,7 +30,7 @@ To train a model, please follow the following steps:
    When selecting a different dataset in Label Maker after start-up, you can refresh the 
    dataset in Data Clinic by clicking "Refresh Images".
 2. Choose "Model Training" in Actions.
-3. Modify the [training parameters](../concepts.md##Training with pytorch_autoencoder) as needed.
+3. Modify the [training parameters](../concepts.md) as needed.
 4. Click Execute.
 5. Choose the computing resources that should be used for this task. Please note that 
 these should not exceed the constraints defined in the [computing API](https://github.com/mlexchange/mlex_computing_api).
@@ -52,7 +52,7 @@ To test a mode, please follow the following steps:
    When selecting a different dataset in Label Maker after start-up, you can refresh the 
    dataset in MLCoach by clicking "Refresh Images".
 2. Choose "Test Prediction using Model" in Actions.
-3. Modify the [testing parameters](../concepts.md##pytorch_autoencoder) as needed.
+3. Modify the [testing parameters](../concepts.md) as needed.
 4. Choose a trained model from the "List of Jobs".
 5. Click Execute.
 6. Choose the computing resources that should be used for this task. Please note that 
