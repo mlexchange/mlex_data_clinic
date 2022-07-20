@@ -23,3 +23,4 @@ COPY src src
 ENV PYTHONUNBUFFERED=1
 
 CMD ["bash"]
+CMD python3 src/frontend.py
