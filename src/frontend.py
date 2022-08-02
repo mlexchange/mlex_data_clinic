@@ -22,7 +22,7 @@ from file_manager import filename_list, move_a_file, move_dir, add_paths_from_di
                          check_duplicate_filename, docker_to_local_path, local_to_docker_path, file_explorer
 from helper_utils import SimpleJob
 from helper_utils import plot_figure, get_bottleneck, get_job, generate_loss_plot, load_from_dir, str_to_dict, \
-                         model_list_GET_call, get_gui_components, init_counter
+                         model_list_GET_call, get_gui_components, get_counter
 from assets.kwarg_editor import JSONParameterEditor
 import templates
 
@@ -109,7 +109,7 @@ SIDEBAR = [
         is_open=False,
     ),
     dcc.Store(id='warning-cause', data=''),
-    dcc.Store(id='counters', data=init_counter(USER))
+    dcc.Store(id='counters', data=get_counter(USER))
 ]
 
 
@@ -297,15 +297,20 @@ def toggle_warning_modal(warning_cause, ok_n_clicks, is_open):
         ok_n_clicks:        Close the warning
         is_open:            Close/open state of the warning
     '''
-    if ok_n_clicks:
+    changed_id = dash.callback_context.triggered[0]['prop_id']
+    if 'ok-button.n_clicks' in changed_id:
         return not is_open, ""
     if warning_cause == 'wrong_dataset':
         return not is_open, "The dataset you have selected is not supported. Please select (1) a data directory " \
                         "where each subfolder corresponds to a given category, OR (2) an NPZ file."
     if warning_cause == 'different_size':
         return not is_open, "The number of images and labels do not match. Please select a different dataset."
+    if warning_cause == 'no_row_selected':
+        return not is_open, "Please select a trained model from the List of Jobs"
+    if warning_cause == 'no_dataset':
+        return not is_open, "Please upload the dataset before submitting the job."
     else:
-        return not is_open, ""
+        return False, ""
 
 
 @app.callback(
@@ -614,7 +619,8 @@ def refresh_image(import_dir, confirm_import, ls_var, target_width, target_heigh
                 reconstructed_data = np.load(reconstructed_path)
                 slider_max = reconstructed_data.shape[0]
                 img_ind = min(slider_max, img_ind)
-                reconst_img = Image.fromarray((np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
+                reconst_img = Image.fromarray((np.squeeze((reconstructed_data[img_ind] -
+                                                           np.min(reconstructed_data[img_ind])) * 255)).astype(np.uint8))
             except Exception:
                 print('Reconstructed images are not ready')
             indx = data_table[row[0]]['parameters'].find('Training Parameters:')
@@ -767,6 +773,7 @@ def deselect_row(n_click):
 @app.callback(
     Output('resources-setup', 'is_open'),
     Output('counters', 'data'),
+    Output("warning-cause", "data"),
 
     Input('execute', 'n_clicks'),
     Input('submit', 'n_clicks'),
@@ -804,8 +811,16 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'execute.n_clicks' in changed_id:
-        return True, counters
+        if len(filenames) == 0:
+            return False, counters, 'no_dataset'
+        if action_selection != 'train_model' and not row:
+            return False, counters, 'no_row_selected'
+        if row:
+            if action_selection != 'train_model' and job_data[row[0]]['job_type'].split(' ')[0] != 'train_model':
+                return False, counters, 'no_row_selected'
+        return True, counters, ''
     if 'submit.n_clicks' in changed_id:
+        counters = get_counter(USER)
         experiment_id = str(uuid.uuid4())
         out_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, experiment_id))
         out_path.mkdir(parents=True, exist_ok=True)
@@ -848,8 +863,8 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
                                   'params': json_dict,
                                   **kwargs})
         job.submit(USER, num_cpus, num_gpus)
-        return False, counters
-    return False, counters
+        return False, counters, ''
+    return False, counters, ''
 
 
 if __name__ == "__main__":

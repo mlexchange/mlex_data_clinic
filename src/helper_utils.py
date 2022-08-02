@@ -238,7 +238,7 @@ def get_gui_components(model_uid, comp_group):
     return json.loads(response.read())
 
 
-def init_counter(username):
+def get_counter(username):
     job_list = get_job(username, 'data_clinic')
     job_types = ['train_model', 'prediction_model']
     counters = [-1, -1]
