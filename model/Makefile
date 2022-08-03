@@ -1,5 +1,5 @@
 TAG 			:= latest	
-USER 			:= mlexchange
+USER 			:= mlexchange1
 PROJECT			:= unsupervised-classifier
 
 IMG_WEB_SVC    		:= ${USER}/${PROJECT}:${TAG}
