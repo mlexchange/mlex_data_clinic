@@ -175,7 +175,7 @@
       "param_key": "num_epochs",
       "min": 1,
       "max": 1000,
-      "value": 3,
+      "value": 30,
       "marks": {
         "1": "1",
         "1000": "1000"
@@ -503,7 +503,7 @@
       "param_key": "num_epochs",
       "min": 1,
       "max": 1000,
-      "value": 3,
+      "value": 30,
       "marks": {
         "1": "1",
         "1000": "1000"
