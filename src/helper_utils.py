@@ -18,12 +18,14 @@ import requests
 class SimpleJob:
     def __init__(self,
                  service_type,
+                 description,
                  working_directory,
                  uri,
                  cmd,
                  kwargs = None,
                  mlex_app = 'data_clinic'):
         self.mlex_app = mlex_app
+        self.description = description
         self.service_type = service_type
         self.working_directory = working_directory
         self.job_kwargs = {'uri': uri,
@@ -245,10 +247,10 @@ def get_counter(username):
     if job_list is not None:
         for indx, job_type in enumerate(job_types):
             for job in reversed(job_list):
-                last_job = job['job_kwargs']['kwargs']['job_type'].split()
-                value = int(last_job[-1])
-                last_job = ' '.join(last_job[0:-1])
-                if last_job == job_type:
+                last_job = job['job_kwargs']['kwargs']['job_type']
+                job_name = job['description'].split()
+                if last_job == job_type and job_name[0] == job_type and len(job_name)==2 and job_name[-1].isdigit():
+                    value = int(job_name[-1])
                     counters[indx] = value
                     break
     return counters
