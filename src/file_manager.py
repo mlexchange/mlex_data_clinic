@@ -17,10 +17,15 @@ LOCAL_HOME = str(LOCAL_DATA)
 
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 DATAPATH_DEFAULT, FILENAMES_DEFAULT = [], []
-DATAPATH = requests.get(f'http://labelmaker-api:8005/api/v0/import/datapath').json()
-if bool(DATAPATH['datapath']) and os.path.isdir(DATAPATH['datapath'][0]['file_path']):
-    DATAPATH_DEFAULT = DATAPATH['datapath'][0]['file_path']
-    FILENAMES_DEFAULT = DATAPATH['filenames']
+try:
+    DATAPATH = requests.get(f'http://labelmaker-api:8005/api/v0/import/datapath').json()
+except Exception as e:
+    DATAPATH = False
+    print(e)
+if DATAPATH:
+    if bool(DATAPATH['datapath']) and os.path.isdir(DATAPATH['datapath'][0]['file_path']):
+        DATAPATH_DEFAULT = DATAPATH['datapath'][0]['file_path']
+        FILENAMES_DEFAULT = DATAPATH['filenames']
 
 # FILES DISPLAY
 file_paths_table = html.Div(

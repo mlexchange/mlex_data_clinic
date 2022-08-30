@@ -60,7 +60,8 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
         data = []
         for dirpath, subdirs, files in os.walk(data_path):
             for file in files:
-                if os.path.splitext(file)[-1] in ['.tiff', '.tif', '.jpg', '.jpeg', '.png']:
+                if os.path.splitext(file)[-1] in ['.tiff', '.tif', '.jpg', '.jpeg', '.png'] and\
+                        not ('.' in os.path.splitext(file)[0]):
                     filename = os.path.join(dirpath, file)
                     img = Image.open(filename)
                     data.append(np.array(img))
@@ -74,7 +75,7 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
         dataset = torch.nn.functional.interpolate(dataset, target_size)
     data_transform = []
     if brightness>0 or contrast>0 or saturation>0 or hue>0:
-        data_transform.append(transforms.ColorJitter((0.4,brightness), contrast, saturation, hue))
+        data_transform.append(transforms.ColorJitter(brightness, contrast, saturation, hue))
     if horz_flip_prob>0:
         data_transform.append(transforms.RandomHorizontalFlip(p=horz_flip_prob))
     if vert_flip_prob>0:

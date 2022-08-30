@@ -22,7 +22,7 @@ from file_manager import filename_list, move_a_file, move_dir, add_paths_from_di
                          check_duplicate_filename, docker_to_local_path, local_to_docker_path, file_explorer
 from helper_utils import SimpleJob
 from helper_utils import plot_figure, get_bottleneck, get_job, generate_loss_plot, load_from_dir, str_to_dict, \
-                         model_list_GET_call, get_gui_components, init_counter
+                         model_list_GET_call, get_gui_components, get_counter
 from assets.kwarg_editor import JSONParameterEditor
 import templates
 
@@ -78,20 +78,19 @@ SIDEBAR = [
                 dbc.FormGroup([
                     dbc.Label('Data'),
                     file_explorer,
-                ])
+                ]),
+                dbc.Button('Execute',
+                           id='execute',
+                           n_clicks=0,
+                           className='m-1',
+                           style={'width': '100%', 'justify-content': 'center'})
             ])
         ]
     ),
     dbc.Card(
         children=[
             dbc.CardHeader("Parameters"),
-            dbc.CardBody([html.Div(id='app-parameters'),
-                          dbc.Button('Execute',
-                                     id='execute',
-                                     n_clicks=0,
-                                     className='m-1',
-                                     style={'width': '100%', 'justify-content': 'center'})
-                          ])
+            dbc.CardBody([html.Div(id='app-parameters')])
         ]
     ),
     dbc.Modal(
@@ -109,7 +108,7 @@ SIDEBAR = [
         is_open=False,
     ),
     dcc.Store(id='warning-cause', data=''),
-    dcc.Store(id='counters', data=init_counter(USER))
+    dcc.Store(id='counters', data=get_counter(USER))
 ]
 
 
@@ -128,12 +127,18 @@ JOB_STATUS = dbc.Card(
             dbc.CardHeader("List of Jobs"),
             dbc.CardBody(
                 children=[
-                    dbc.Button("Deselect Row", id="deselect-row"),
+                    dbc.Row(
+                        [
+                            dbc.Button("Deselect Row", id="deselect-row", style={'margin-left': '1rem'}),
+                            dbc.Button("Delete Job", id="delete-row", color='danger'),
+                        ]
+                    ),
                     dash_table.DataTable(
                         id='jobs-table',
                         columns=[
                             {'name': 'Job ID', 'id': 'job_id'},
                             {'name': 'Type', 'id': 'job_type'},
+                            {'name': 'Name', 'id': 'name'},
                             {'name': 'Status', 'id': 'status'},
                             {'name': 'Parameters', 'id': 'parameters'},
                             {'name': 'Experiment ID', 'id': 'experiment_id'},
@@ -162,6 +167,21 @@ JOB_STATUS = dbc.Card(
                     )
                 ],
             ),
+        dbc.Modal(
+            [
+                dbc.ModalHeader("Warning"),
+                dbc.ModalBody('Models cannot be recovered after deletion.  \
+                                Do you still want to proceed?"'),
+                dbc.ModalFooter([
+                    dbc.Button(
+                        "OK", id="confirm-delete-row", color='danger', outline=False,
+                        className="ms-auto", n_clicks=0
+                    ),
+                ]),
+            ],
+            id="delete-modal",
+            is_open=False,
+        ),
         dbc.Modal([
             dbc.ModalHeader("Job Logs"),
             dbc.ModalBody(id='log-display'),
@@ -218,15 +238,20 @@ RESOURCES_SETUP = html.Div(
                 dbc.ModalBody(
                     children=[
                         dbc.FormGroup([
-                                dbc.Label('Number of CPUs'),
-                                dbc.Input(id='num-cpus',
-                                          type="int",
-                                          value=1)]),
+                            dbc.Label('Number of CPUs'),
+                            dbc.Input(id='num-cpus',
+                                      type="int",
+                                      value=1)]),
                         dbc.FormGroup([
-                                dbc.Label('Number of GPUs'),
-                                dbc.Input(id='num-gpus',
-                                          type="int",
-                                          value=0)])
+                            dbc.Label('Number of GPUs'),
+                            dbc.Input(id='num-gpus',
+                                      type="int",
+                                      value=0)]),
+                        dbc.FormGroup([
+                            dbc.Label('Model Name'),
+                            dbc.Input(id='model-name',
+                                      type="str",
+                                      value="")])
                     ]),
                 dbc.ModalFooter(
                     dbc.Button(
@@ -297,15 +322,20 @@ def toggle_warning_modal(warning_cause, ok_n_clicks, is_open):
         ok_n_clicks:        Close the warning
         is_open:            Close/open state of the warning
     '''
-    if ok_n_clicks:
+    changed_id = dash.callback_context.triggered[0]['prop_id']
+    if 'ok-button.n_clicks' in changed_id:
         return not is_open, ""
     if warning_cause == 'wrong_dataset':
         return not is_open, "The dataset you have selected is not supported. Please select (1) a data directory " \
                         "where each subfolder corresponds to a given category, OR (2) an NPZ file."
     if warning_cause == 'different_size':
         return not is_open, "The number of images and labels do not match. Please select a different dataset."
+    if warning_cause == 'no_row_selected':
+        return not is_open, "Please select a trained model from the List of Jobs"
+    if warning_cause == 'no_dataset':
+        return not is_open, "Please upload the dataset before submitting the job."
     else:
-        return not is_open, ""
+        return False, ""
 
 
 @app.callback(
@@ -352,7 +382,6 @@ def toggle_modal_keyword(import_button, confirm_import, img_key, is_open, npz_pa
         img_options:        Keyword options for images
     '''
     img_options = []
-    label_options = []
     toggle_modal = is_open
     changed_id = dash.callback_context.triggered[0]['prop_id']
     if npz_path:
@@ -598,34 +627,36 @@ def refresh_image(import_dir, confirm_import, ls_var, target_width, target_heigh
         ls_plot = get_bottleneck(1, 1, 1, False)
         target_width = None
     if row:
-        if data_table[row[0]]['job_type'].split(' ')[0] == 'train_model':
-            if action_selection == 'prediction_model':
-                train_params = str_to_dict(data_table[row[0]]['parameters'])
+        if row[0] < len(data_table):
+            if data_table[row[0]]['job_type'].split()[0] == 'train_model':
+                if action_selection == 'prediction_model':
+                    train_params = str_to_dict(data_table[row[0]]['parameters'])
+                    ls_var = int(train_params['latent_dim'])
+                    target_width = int(train_params['target_width'])
+                    target_height = int(train_params['target_height'])
+                    ls_plot = get_bottleneck(ls_var, target_width, target_height)
+            else:
+                supported_formats = ['tiff', 'tif', 'jpg', 'jpeg', 'png']
+                filenames = add_paths_from_dir(data_table[row[0]]['dataset'], supported_formats, [])
+                job_id = data_table[row[0]]['experiment_id']
+                reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
+                try:
+                    reconstructed_data = np.load(reconstructed_path)
+                    slider_max = reconstructed_data.shape[0]
+                    img_ind = min(slider_max, img_ind)
+                    reconst_img = Image.fromarray((np.squeeze((reconstructed_data[img_ind] -
+                                                               np.min(reconstructed_data[img_ind])) * 255)).astype(np.uint8))
+                except Exception:
+                    print('Reconstructed images are not ready')
+                indx = data_table[row[0]]['parameters'].find('Training Parameters:')
+                train_params = str_to_dict(data_table[row[0]]['parameters'][indx + 21:])
                 ls_var = int(train_params['latent_dim'])
                 target_width = int(train_params['target_width'])
                 target_height = int(train_params['target_height'])
-                ls_plot = get_bottleneck(ls_var, target_width, target_height)
-        else:
-            supported_formats = ['tiff', 'tif', 'jpg', 'jpeg', 'png']
-            filenames = add_paths_from_dir(data_table[row[0]]['dataset'], supported_formats, [])
-            job_id = data_table[row[0]]['experiment_id']
-            reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
-            try:
-                reconstructed_data = np.load(reconstructed_path)
-                slider_max = reconstructed_data.shape[0]
-                img_ind = min(slider_max, img_ind)
-                reconst_img = Image.fromarray((np.squeeze(reconstructed_data[img_ind] * 255)).astype(np.uint8))
-            except Exception:
-                print('Reconstructed images are not ready')
-            indx = data_table[row[0]]['parameters'].find('Training Parameters:')
-            train_params = str_to_dict(data_table[row[0]]['parameters'][indx + 21:])
-            ls_var = int(train_params['latent_dim'])
-            target_width = int(train_params['target_width'])
-            target_height = int(train_params['target_height'])
-            if 'img-slider.value' in changed_id:
-                ls_plot = dash.no_update
-            else:
-                ls_plot = get_bottleneck(ls_var, target_width, target_height)
+                if 'img-slider.value' in changed_id:
+                    ls_plot = dash.no_update
+                else:
+                    ls_plot = get_bottleneck(ls_var, target_width, target_height)
 
     if len(filenames) > 0:
         try:
@@ -709,11 +740,12 @@ def update_table(n, row, active_cell, close_clicks, current_job_table, current_f
     if job_list is not None:
         for job in job_list:
             params = str(job['job_kwargs']['kwargs']['params'])
-            if job['job_kwargs']['kwargs']['job_type'].split(' ')[0] != 'train_model':
+            if job['job_kwargs']['kwargs']['job_type'].split()[0] != 'train_model':
                 params = params + '\nTraining Parameters: ' + str(job['job_kwargs']['kwargs']['train_params'])
             data_table.insert(0,
                               dict(
                                   job_id=job['uid'],
+                                  name=job['description'],
                                   job_type=job['job_kwargs']['kwargs']['job_type'],
                                   status=job['status']['state'],
                                   parameters=params,
@@ -737,13 +769,14 @@ def update_table(n, row, active_cell, close_clicks, current_job_table, current_f
     fig = go.Figure(go.Scatter(x=[], y=[]))
     show_plot = False
     if row:
-        log = data_table[row[0]]["job_logs"]
-        if log:
-            if data_table[row[0]]['job_type'].split(' ')[0] == 'train_model':
-                start = log.find('epoch')
-                if start > -1 and len(log) > start + 5:
-                    fig = generate_loss_plot(log, start)
-                    show_plot = True
+        if row[0] < len(data_table):
+            log = data_table[row[0]]["job_logs"]
+            if log:
+                if data_table[row[0]]['job_type'].split()[0] == 'train_model':
+                    start = log.find('epoch')
+                    if start > -1 and len(log) > start + 5:
+                        fig = generate_loss_plot(log, start)
+                        show_plot = True
     if current_fig:
         if current_fig['data'][0]['x']== list(fig['data'][0]['x']):
             fig = dash.no_update
@@ -755,7 +788,7 @@ def update_table(n, row, active_cell, close_clicks, current_job_table, current_f
 @app.callback(
     Output('jobs-table', 'selected_rows'),
     Input('deselect-row', 'n_clicks'),
-    prevent_intial_call=True
+    prevent_initial_call=True
 )
 def deselect_row(n_click):
     '''
@@ -765,8 +798,30 @@ def deselect_row(n_click):
 
 
 @app.callback(
+    Output('delete-modal', 'is_open'),
+    Input('confirm-delete-row', 'n_clicks'),
+    Input('delete-row', 'n_clicks'),
+    State('jobs-table', 'selected_rows'),
+    State('jobs-table', 'data'),
+    prevent_initial_call=True
+)
+def delete_row(confirm_delete, delete, row, job_data):
+    '''
+    This callback deletes the selected model in the table
+    '''
+    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+    if 'delete-row.n_clicks' == changed_id:
+        return True
+    else:
+        job_uid = job_data[row[0]]['job_id']
+        requests.delete(f'http://job-service:8080/api/v0/jobs/{job_uid}/delete')
+        return False
+
+
+@app.callback(
     Output('resources-setup', 'is_open'),
     Output('counters', 'data'),
+    Output("warning-cause", "data"),
 
     Input('execute', 'n_clicks'),
     Input('submit', 'n_clicks'),
@@ -781,9 +836,10 @@ def deselect_row(n_click):
     State("docker-file-paths", "data"),
     State("counters", "data"),
     State("npz-img-key", "value"),
+    State("model-name", "value"),
     prevent_intial_call=True)
 def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job_data, row, data_path, filenames,
-            counters, x_key):
+            counters, x_key, model_name):
     '''
     This callback submits a job request to the compute service according to the selected action & model
     Args:
@@ -804,8 +860,16 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'execute.n_clicks' in changed_id:
-        return True, counters
+        if len(filenames) == 0:
+            return False, counters, 'no_dataset'
+        if action_selection != 'train_model' and not row:
+            return False, counters, 'no_row_selected'
+        if row:
+            if action_selection != 'train_model' and job_data[row[0]]['job_type'].split()[0] != 'train_model':
+                return False, counters, 'no_row_selected'
+        return True, counters, ''
     if 'submit.n_clicks' in changed_id:
+        counters = get_counter(USER)
         experiment_id = str(uuid.uuid4())
         out_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, experiment_id))
         out_path.mkdir(parents=True, exist_ok=True)
@@ -838,18 +902,21 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
         if action_selection == 'prediction_model':
             command = "python3 src/predict_model.py"
             directories = [data_path, str(in_path) , str(out_path)]
+        if len(model_name)==0:      # if model_name was not defined
+            model_name = f'{action_selection} {count}'
         job = SimpleJob(service_type='backend',
+                        description=model_name,
                         working_directory='{}'.format(DATA_DIR),
                         uri='mlexchange1/unsupervised-classifier',
                         cmd= ' '.join([command] + directories + ['\''+json.dumps(json_dict)+'\'']),
-                        kwargs = {'job_type': f'{action_selection} {count}',
+                        kwargs = {'job_type': action_selection,
                                   'experiment_id': experiment_id,
                                   'dataset': data_path,
                                   'params': json_dict,
                                   **kwargs})
         job.submit(USER, num_cpus, num_gpus)
-        return False, counters
-    return False, counters
+        return False, counters, ''
+    return False, counters, ''
 
 
 if __name__ == "__main__":

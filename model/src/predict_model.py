@@ -56,6 +56,10 @@ if __name__ == '__main__':
     for count, img_embed in enumerate(test_img_embeds):
         dist = torch.cdist(img_embed[None,], test_img_embeds, p=2)
         dist_matrix[count, :] = dist.squeeze(dim=0).detach().cpu().numpy()
+    for row in range(dist_matrix.shape[0]):
+        info_row = dist_matrix[row, :]
+        temp = info_row.argsort()
+        dist_matrix[row, :] = temp.astype('int')  # ranks
     dist_matrix = pd.DataFrame(dist_matrix)
     if len(filenames) > 0:
         dist_matrix['filename'] = filenames

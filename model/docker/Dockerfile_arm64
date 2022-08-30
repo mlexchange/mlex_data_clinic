@@ -1,6 +1,6 @@
 FROM kumatea/pytorch:latest
 
-COPY docker/requirements.txt requirements.txt
+COPY docker/requirements_arm64.txt requirements.txt
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
          build-essential\
