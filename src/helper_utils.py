@@ -248,7 +248,10 @@ def get_counter(username):
         for indx, job_type in enumerate(job_types):
             for job in reversed(job_list):
                 last_job = job['job_kwargs']['kwargs']['job_type']
-                job_name = job['description'].split()
+                if job['description']:
+                     job_name = job['description'].split()
+                else:
+                    job_name = job['job_kwargs']['kwargs']['job_type'].split()
                 if last_job == job_type and job_name[0] == job_type and len(job_name)==2 and job_name[-1].isdigit():
                     value = int(job_name[-1])
                     counters[indx] = value
