@@ -57,7 +57,7 @@ if __name__ == '__main__':
     trainer = pl.Trainer(default_root_dir=args.output_dir,
                          gpus=1 if str(device).startswith("cuda") else 0,
                          max_epochs=train_parameters.num_epochs,
-                         progress_bar_refresh_rate=0,
+                         enable_progress_bar=False,#progress_bar_refresh_rate=0,
                          callbacks=[ModelCheckpoint(dirpath=args.output_dir,
                                                     save_last=True,
                                                     filename='checkpoint_file',
