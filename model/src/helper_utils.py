@@ -79,7 +79,9 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
             data_transform.append(transforms.Resize(target_size))
         data_transform.append(transforms.ToTensor())
         dataset = CustomDirectoryDataset(data_path, transforms.Compose(data_transform))
-    
+        (input_channels, width, height) = dataset[0][0].shape
+        list_filenames = dataset.total_imgs
+
     if val_pct:
         train_set, val_set = split_dataset(dataset, val_pct)
         train_loader = torch.utils.data.DataLoader(
