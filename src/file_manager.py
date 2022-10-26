@@ -119,7 +119,7 @@ data_access = html.Div([
                                                     {'label': '.csv', 'value': '*.csv'},
                                                     {'label': '.npz', 'value': '*.npz'},
                                                 ],
-                                                value='*')
+                                                value='dir')
                                             ],
                                             style={"width": "15%", 'margin-right': '60px'}
                                     ),

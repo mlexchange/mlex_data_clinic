@@ -3,7 +3,7 @@ import os
 import logging
 import pathlib
 import shutil
-import zipfile
+import zipfile, time
 import uuid, requests
 
 import dash
@@ -22,7 +22,7 @@ from file_manager import filename_list, move_a_file, move_dir, add_paths_from_di
                          check_duplicate_filename, docker_to_local_path, local_to_docker_path, file_explorer
 from helper_utils import SimpleJob
 from helper_utils import plot_figure, get_bottleneck, get_job, generate_loss_plot, load_from_dir, str_to_dict, \
-                         model_list_GET_call, get_gui_components, get_counter
+                         model_list_GET_call, get_gui_components, get_counter, get_host
 from assets.kwarg_editor import JSONParameterEditor
 import templates
 
@@ -38,6 +38,8 @@ DOCKER_HOME = str(DOCKER_DATA) + '/'
 LOCAL_HOME = str(LOCAL_DATA)
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 SUPPORTED_FORMATS = ['tiff', 'tif', 'jpg', 'jpeg', 'png']
+HOST_NICKNAME = str(os.environ['HOST_NICKNAME'])
+num_processors, num_gpus = get_host(HOST_NICKNAME)
 
 #### SETUP DASH APP ####
 external_stylesheets = [dbc.themes.BOOTSTRAP, "../assets/segmentation-style.css"]
@@ -155,6 +157,7 @@ JOB_STATUS = dbc.Card(
                                     'maxWidth': 0},
                         fixed_rows={'headers': True},
                         css=[{"selector": ".show-hide", "rule": "display: none"}],
+                        page_size=8,
                         style_data_conditional=[
                             {'if': {'column_id': 'status', 'filter_query': '{status} = complete'},
                              'backgroundColor': 'green',
@@ -163,7 +166,7 @@ JOB_STATUS = dbc.Card(
                              'backgroundColor': 'red',
                              'color': 'white'},
                         ],
-                        style_table={'height': '30rem', 'overflowY': 'auto', 'overflowX': 'scroll'}
+                        style_table={'height': '30rem', 'overflowY': 'auto'} #, 'overflowX': 'scroll'}
                     )
                 ],
             ),
@@ -234,19 +237,19 @@ RESOURCES_SETUP = html.Div(
     [
         dbc.Modal(
             [
-                dbc.ModalHeader("Resources Setup"),
+                dbc.ModalHeader("Choose number of computing resources:"),
                 dbc.ModalBody(
                     children=[
                         dbc.FormGroup([
-                            dbc.Label('Number of CPUs'),
+                            dbc.Label(f'Number of CPUs (Maximum available: {num_processors})'),
                             dbc.Input(id='num-cpus',
                                       type="int",
-                                      value=1)]),
+                                      value=2)]),
                         dbc.FormGroup([
-                            dbc.Label('Number of GPUs'),
+                            dbc.Label(f'Number of GPUs (Maximum available: {num_gpus})'),
                             dbc.Input(id='num-gpus',
                                       type="int",
-                                      value=0)]),
+                                      value=1)]),
                         dbc.FormGroup([
                             dbc.Label('Model Name'),
                             dbc.Input(id='model-name',
@@ -472,6 +475,7 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
         selected_files:     List of selected filename FROM DOCKER PATH (no subdirectories)
         selected_row:       Selected row in jobs table
     '''
+    start = time.time()
     changed_id = dash.callback_context.triggered[0]['prop_id']
 
     supported_formats = []
@@ -523,7 +527,7 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
             files = filename_list(DOCKER_DATA, browse_format)
     if not docker_path:
         files = docker_to_local_path(files, DOCKER_HOME, LOCAL_HOME)
-    
+    print(f'file manager callback {time.time()-start}')
     if changed_id == 'refresh-data.n_clicks':
         list_filename, selected_files = [], []
         datapath = requests.get(f'http://labelmaker-api:8005/api/v0/import/datapath').json()
@@ -613,8 +617,10 @@ def refresh_image(import_dir, confirm_import, ls_var, target_width, target_heigh
         img-slider-value:   Value of the slider according to the dataset length
         data-size-out:      Size of uploaded data
     '''
+    start = time.time()
     current_im_label = ''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+    print(f'changed id: {changed_id}')
     if action_selection in ['train_model', 'transfer_learning']:
         if len(ls_var) > 0:
             ls_var = int(ls_var[0])
@@ -639,13 +645,17 @@ def refresh_image(import_dir, confirm_import, ls_var, target_width, target_heigh
                 supported_formats = ['tiff', 'tif', 'jpg', 'jpeg', 'png']
                 filenames = add_paths_from_dir(data_table[row[0]]['dataset'], supported_formats, [])
                 job_id = data_table[row[0]]['experiment_id']
-                reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
+                reconstructed_path = 'data/mlexchange_store/{}/{}/'.format(USER, job_id)
+                #reconstructed_path = 'data/mlexchange_store/{}/{}/reconstructed_images.npy'.format(USER, job_id)
                 try:
-                    reconstructed_data = np.load(reconstructed_path)
-                    slider_max = reconstructed_data.shape[0]
+                    slider_max = len(filenames)
                     img_ind = min(slider_max, img_ind)
-                    reconst_img = Image.fromarray((np.squeeze((reconstructed_data[img_ind] -
-                                                               np.min(reconstructed_data[img_ind])) * 255)).astype(np.uint8))
+                    reconst_img= Image.open(f'{reconstructed_path}{img_ind}.jpg')
+                    #reconstructed_data = np.load(reconstructed_path)
+                    #slider_max = reconstructed_data.shape[0]
+                    #img_ind = min(slider_max, img_ind)
+                    #reconst_img = Image.fromarray((np.squeeze((reconstructed_data[img_ind] -
+                    #                                           np.min(reconstructed_data[img_ind])) * 255)).astype(np.uint8))
                 except Exception:
                     print('Reconstructed images are not ready')
                 indx = data_table[row[0]]['parameters'].find('Training Parameters:')
@@ -692,7 +702,7 @@ def refresh_image(import_dir, confirm_import, ls_var, target_width, target_heigh
         recimg = plot_figure(reconst_img)
         data_size = 'Original Image: (' + str(width) + 'x' + str(height) + \
                     '). Choose a trained model to update the graph.'
-    
+    print(f'Time in callback {time.time()-start}')
     return origimg, recimg, ls_plot, slider_max, img_ind, data_size, 'Image: '+current_im_label
 
 
@@ -774,12 +784,19 @@ def update_table(n, row, active_cell, close_clicks, current_job_table, current_f
             if log:
                 if data_table[row[0]]['job_type'].split()[0] == 'train_model':
                     start = log.find('epoch')
-                    if start > -1 and len(log) > start + 5:
-                        fig = generate_loss_plot(log, start)
-                        show_plot = True
+                    if start > -1 and len(log) > start + 25:
+                        try:
+                            fig = generate_loss_plot(log, start)
+                            show_plot = True
+                        except Exception as e:
+                            print(f'Loss plot exception {e}')
     if current_fig:
-        if current_fig['data'][0]['x']== list(fig['data'][0]['x']):
-            fig = dash.no_update
+        #if len(fig['data'])>0:
+        try:
+            if current_fig['data'][0]['x'] == list(fig['data'][0]['x']):
+                fig = dash.no_update
+        except Exception as e:
+            print(e)
     if data_table == current_job_table:
         data_table = dash.no_update
     return data_table, fig, show_plot, is_open, log_display, None
