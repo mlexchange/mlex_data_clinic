@@ -81,7 +81,7 @@ if __name__ == '__main__':
         dist_matrix[row, :] = temp.astype('int')  # ranks
     dist_matrix = pd.DataFrame(dist_matrix)
     if len(filenames) > 0:
-        dist_matrix['filename'] = list_filenames #[args.input_dir + '/' + x for x in filenames]
+        dist_matrix['filename'] = list_filenames
         dist_matrix.set_index('filename', inplace=True)
     dist_matrix.columns = dist_matrix.columns.astype(str)
     dist_matrix.to_parquet(args.output_dir + '/dist_matrix.parquet')
