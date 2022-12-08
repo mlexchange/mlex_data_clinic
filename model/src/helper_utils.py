@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torchvision import datasets, transforms
 
-from model import CustomTensorDataset
+from model import CustomTensorDataset, CustomDirectoryDataset
 
 
 def split_dataset(dataset, val_pct):
@@ -48,6 +48,16 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
         PyTorch DataLoaders
     '''
     data_type = os.path.splitext(data_path)[-1]
+
+    # Definition of data transforms
+    data_transform = []
+    if brightness>0 or contrast>0 or saturation>0 or hue>0:
+        data_transform.append(transforms.ColorJitter(brightness, contrast, saturation, hue))
+    if horz_flip_prob>0:
+        data_transform.append(transforms.RandomHorizontalFlip(p=horz_flip_prob))
+    if vert_flip_prob>0:
+        data_transform.append(transforms.RandomVerticalFlip(p=vert_flip_prob))
+
     list_filenames = []
     if data_type == '.npz' or data_type == '.npy':
         if data_type == '.npz':
@@ -56,32 +66,22 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
         else:
             data = np.load(data_path)   # one single datafile
         data = data.astype('float32')
+        if len(data.shape) == 3:
+            data = np.expand_dims(data, 3)
+        dataset = torch.tensor(data)
+        dataset = einops.rearrange(dataset, 'n x y c -> n c x y')
+        if target_size:
+            dataset = torch.nn.functional.interpolate(dataset, target_size)
+        (input_channels, width, height) = dataset.shape[1:]
+        dataset = CustomTensorDataset((dataset,dataset), transforms.Compose(data_transform))
     else:
-        data = []
-        for dirpath, subdirs, files in os.walk(data_path):
-            for file in files:
-                if os.path.splitext(file)[-1] in ['.tiff', '.tif', '.jpg', '.jpeg', '.png'] and\
-                        not ('.' in os.path.splitext(file)[0]):
-                    filename = os.path.join(dirpath, file)
-                    img = Image.open(filename)
-                    data.append(np.array(img))
-                    list_filenames.append(filename)
-        data = (np.array(data) / 255).astype('float32')  # The dataset is normalized [0,1]
-    if len(data.shape) == 3:
-        data = np.expand_dims(data, 3)
-    dataset = torch.tensor(data)
-    dataset = einops.rearrange(dataset, 'n x y c -> n c x y')
-    if target_size:
-        dataset = torch.nn.functional.interpolate(dataset, target_size)
-    data_transform = []
-    if brightness>0 or contrast>0 or saturation>0 or hue>0:
-        data_transform.append(transforms.ColorJitter(brightness, contrast, saturation, hue))
-    if horz_flip_prob>0:
-        data_transform.append(transforms.RandomHorizontalFlip(p=horz_flip_prob))
-    if vert_flip_prob>0:
-        data_transform.append(transforms.RandomVerticalFlip(p=vert_flip_prob))
-    (input_channels, width, height) = dataset.shape[1:]
-    dataset = CustomTensorDataset((dataset,dataset), transforms.Compose(data_transform))
+        if target_size:
+            data_transform.append(transforms.Resize(target_size))
+        data_transform.append(transforms.ToTensor())
+        dataset = CustomDirectoryDataset(data_path, transforms.Compose(data_transform))
+        (input_channels, width, height) = dataset[0][0].shape
+        list_filenames = dataset.total_imgs
+
     if val_pct:
         train_set, val_set = split_dataset(dataset, val_pct)
         train_loader = torch.utils.data.DataLoader(

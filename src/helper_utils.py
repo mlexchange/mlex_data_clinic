@@ -98,10 +98,13 @@ def plot_figure(image):
                      zeroline=False,
                      fixedrange=True)
     fig.update_layout(margin=dict(l=0, r=0, t=0, b=0))
-    fig.update_traces(dict(showscale=False, coloraxis=None))
-    png = plotly.io.to_image(fig)
+    try:
+        fig.update_traces(dict(showscale=False, coloraxis=None))
+    except Exception as e:
+        print('plot error')
+    png = plotly.io.to_image(fig, format='jpg')
     png_base64 = base64.b64encode(png).decode('ascii')
-    return "data:image/png;base64,{}".format(png_base64)
+    return "data:image/jpg;base64,{}".format(png_base64)
 
 
 def get_bottleneck(ls_var, width, height, annotations=True):
@@ -248,9 +251,20 @@ def get_counter(username):
         for indx, job_type in enumerate(job_types):
             for job in reversed(job_list):
                 last_job = job['job_kwargs']['kwargs']['job_type']
-                job_name = job['description'].split()
+                if job['description']:
+                     job_name = job['description'].split()
+                else:
+                    job_name = job['job_kwargs']['kwargs']['job_type'].split()
                 if last_job == job_type and job_name[0] == job_type and len(job_name)==2 and job_name[-1].isdigit():
                     value = int(job_name[-1])
                     counters[indx] = value
                     break
     return counters
+
+
+def get_host(host_nickname):
+    hosts = requests.get(f'http://job-service:8080/api/v0/hosts?&nickname={host_nickname}').json()
+    max_processors = hosts[0]['backend_constraints']['num_processors']
+    max_gpus = hosts[0]['backend_constraints']['num_gpus']
+    return max_processors, max_gpus
+

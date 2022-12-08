@@ -1,5 +1,6 @@
-FROM kumatea/pytorch:latest
-
+#FROM kumatea/pytorch:latest
+FROM sonoisa/deep-learning-coding:pytorch1.6.0_tensorflow2.3.0
+USER root
 COPY docker/requirements_arm64.txt requirements.txt
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -14,8 +15,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pip install --upgrade pip
 
 RUN pip install -r requirements.txt
-
+RUN pip install -U numpy
 WORKDIR /app/work/
 COPY src/ src/
+#COPY entrypoint.sh entrypoint.sh
 
+#ENTRYPOINT ["entrypoint.sh"]
 CMD ["bash"]
