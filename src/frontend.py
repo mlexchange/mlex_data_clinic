@@ -531,9 +531,10 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
     print(f'file manager callback {time.time()-start}')
     if changed_id == 'refresh-data.n_clicks':
         list_filename, selected_files = [], []
-        datapath = requests.get(f'http://labelmaker-api:8005/api/v0/import/datapath').json()
-        if bool(datapath['datapath']) and os.path.isdir(datapath['datapath'][0]['file_path']):
-            list_filename, selected_files = datapath['filenames'], datapath['datapath'][0]['file_path']
+        datapath = requests.get(f'http://labelmaker-api:8005/api/v0/datapath/import_dataset').json()
+        if datapath:
+            if bool(datapath['datapath']) and os.path.isdir(datapath['datapath']['file_path'][0]):
+                list_filename, selected_files = datapath['filenames'], datapath['datapath']['file_path'][0]
         return files,  list_filename, selected_files
         
     elif changed_id == 'import-dir.n_clicks':
