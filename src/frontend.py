@@ -132,6 +132,7 @@ JOB_STATUS = dbc.Card(
                     dbc.Row(
                         [
                             dbc.Button("Deselect Row", id="deselect-row", style={'margin-left': '1rem'}),
+                            dbc.Button("Stop Job", id="stop-row", color='warning'),
                             dbc.Button("Delete Job", id="delete-row", color='danger'),
                         ]
                     ),
@@ -530,9 +531,10 @@ def file_manager(browse_format, browse_n_clicks, import_n_clicks, delete_n_click
     print(f'file manager callback {time.time()-start}')
     if changed_id == 'refresh-data.n_clicks':
         list_filename, selected_files = [], []
-        datapath = requests.get(f'http://labelmaker-api:8005/api/v0/import/datapath').json()
-        if bool(datapath['datapath']) and os.path.isdir(datapath['datapath'][0]['file_path']):
-            list_filename, selected_files = datapath['filenames'], datapath['datapath'][0]['file_path']
+        datapath = requests.get(f'http://labelmaker-api:8005/api/v0/datapath/import_dataset').json()
+        if datapath:
+            if bool(datapath['datapath']) and os.path.isdir(datapath['datapath']['file_path'][0]):
+                list_filename, selected_files = datapath['filenames'], datapath['datapath']['file_path'][0]
         return files,  list_filename, selected_files
         
     elif changed_id == 'import-dir.n_clicks':
@@ -818,17 +820,22 @@ def deselect_row(n_click):
     Output('delete-modal', 'is_open'),
     Input('confirm-delete-row', 'n_clicks'),
     Input('delete-row', 'n_clicks'),
+    Input('stop-row', 'n_clicks'),
     State('jobs-table', 'selected_rows'),
     State('jobs-table', 'data'),
     prevent_initial_call=True
 )
-def delete_row(confirm_delete, delete, row, job_data):
+def delete_row(confirm_delete, delete, stop, row, job_data):
     '''
     This callback deletes the selected model in the table
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'delete-row.n_clicks' == changed_id:
         return True
+    elif 'stop-row.n_clicks' == changed_id:
+        job_uid = job_data[row[0]]['job_id']
+        requests.patch(f'http://job-service:8080/api/v0/jobs/{job_uid}/terminate')
+        return False
     else:
         job_uid = job_data[row[0]]['job_id']
         requests.delete(f'http://job-service:8080/api/v0/jobs/{job_uid}/delete')

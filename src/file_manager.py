@@ -18,13 +18,13 @@ LOCAL_HOME = str(LOCAL_DATA)
 UPLOAD_FOLDER_ROOT = DOCKER_DATA / 'upload'
 DATAPATH_DEFAULT, FILENAMES_DEFAULT = [], []
 try:
-    DATAPATH = requests.get(f'http://labelmaker-api:8005/api/v0/import/datapath').json()
+    DATAPATH = requests.get(f'http://labelmaker-api:8005/api/v0/datapath/import_dataset').json()
 except Exception as e:
     DATAPATH = False
     print(e)
 if DATAPATH:
-    if bool(DATAPATH['datapath']) and os.path.isdir(DATAPATH['datapath'][0]['file_path']):
-        DATAPATH_DEFAULT = DATAPATH['datapath'][0]['file_path']
+    if bool(DATAPATH['datapath']) and os.path.isdir(DATAPATH['datapath']['file_path'][0]):
+        DATAPATH_DEFAULT = DATAPATH['datapath']['file_path'][0]
         FILENAMES_DEFAULT = DATAPATH['filenames']
 
 # FILES DISPLAY
