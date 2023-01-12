@@ -8,3 +8,4 @@ pytorch-lightning==1.6.1
 #torch==1.9.0
 torchtext==0.6.0
 torchvision #==0.10.0
+numpy==1.23.4
