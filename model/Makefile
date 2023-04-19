@@ -5,7 +5,8 @@ PROJECT			:= unsupervised-classifier
 IMG_WEB_SVC    		:= ${USER}/${PROJECT}:${TAG}
 IMG_WEB_SVC_JYP    	:= ${USER}/${PROJECT_JYP}:${TAG}
 ID_USER			:= ${shell id -u}
-ID_GROUP			:= ${shell id -g}
+ID_GROUP		:= ${shell id -g}
+DATA_PATH		:= ${PWD}/data
 
 .PHONY:
 
@@ -23,16 +24,16 @@ build_docker_arm64:
 	docker build -t ${IMG_WEB_SVC} -f ./docker/Dockerfile_arm64 .
 
 run_docker:
-	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it --gpus all -v ${PWD}:/app/work/ -v /data/tanchavez/Datasets/scattering:/app/work/data -p 8888:8888 ${IMG_WEB_SVC}
+	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it --gpus all -v ${PWD}:/app/work/ -v ${DATA_PATH}:/app/work/data -p 8888:8888 ${IMG_WEB_SVC}
 
 train_example:
-	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it --gpus all -v /data/tanchavez/Datasets/scattering:/app/work/data ${IMG_WEB_SVC} python3 src/train_model.py data/mixed_small_32x32.npz data/out/single '{"target_width": 32, "target_height": 32, "shuffle": true, "batch_size": 32, "val_pct": 20, "latent_dim": 16,  "base_channel_size": 32, "num_epochs": 1, "optimizer": "Adam", "criterion": "MSELoss", "learning_rate": 0.0001, "seed": 32548}' 
+	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it --gpus all -v ${DATA_PATH}:/app/work/data ${IMG_WEB_SVC} python3 src/train_model.py data/mixed_small_32x32.npz data/out/single '{"target_width": 32, "target_height": 32, "shuffle": true, "batch_size": 32, "val_pct": 20, "latent_dim": 16,  "base_channel_size": 32, "num_epochs": 1, "optimizer": "Adam", "criterion": "MSELoss", "learning_rate": 0.0001, "seed": 32548}' 
 
 evaluate_example:
-	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it --gpus all -v /data/tanchavez/Datasets/scattering:/app/work/data ${IMG_WEB_SVC} python3 src/latent_space_evaluation.py data/mixed_small_32x32.npz data/out/swipe '{"target_width": 32, "target_height": 32, "shuffle": true, "batch_size": 32, "val_pct": 20, "latent_dim": [16,20,32],  "base_channel_size": 32, "num_epochs": 1, "optimizer": "Adam", "criterion": "MSELoss", "learning_rate": 0.0001, "seed": 32548}'
+	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it --gpus all -v ${DATA_PATH}:/app/work/data ${IMG_WEB_SVC} python3 src/latent_space_evaluation.py data/mixed_small_32x32.npz data/out/swipe '{"target_width": 32, "target_height": 32, "shuffle": true, "batch_size": 32, "val_pct": 20, "latent_dim": [16,20,32],  "base_channel_size": 32, "num_epochs": 1, "optimizer": "Adam", "criterion": "MSELoss", "learning_rate": 0.0001, "seed": 32548}'
 
 predict_example:
-	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it --gpus all -v /data/tanchavez/Datasets/scattering:/app/work/data ${IMG_WEB_SVC} python3 src/predict_model.py data/mixed_small_32x32.npz data/out/single data/out/results '{"target_width": 32, "target_height": 32, "batch_size": 32, "seed": 32548}'
+	docker run -u ${ID_USER $USER}:${ID_GROUP $USER} --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --memory-swap -1 -it --gpus all -v ${DATA_PATH}:/app/work/data ${IMG_WEB_SVC} python3 src/predict_model.py data/mixed_small_32x32.npz data/out/single data/out/results '{"target_width": 32, "target_height": 32, "batch_size": 32, "seed": 32548}'
 
 
 clean: 
