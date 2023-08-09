@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torchvision import datasets, transforms
 
-from model import CustomTensorDataset, CustomDirectoryDataset
+from model import CustomTensorDataset, CustomDirectoryDataset, CustomSplashDataset
 
 
 def split_dataset(dataset, val_pct):
@@ -25,13 +25,13 @@ def split_dataset(dataset, val_pct):
     return train_set, val_set
 
 
-def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_size=None,
+def get_dataloaders(splash_uri, batch_size, num_workers, shuffle=False, target_size=None,
                     horz_flip_prob=0, vert_flip_prob=0, brightness=0, contrast=0, saturation=0, hue=0,
                     data_keyword=None, val_pct=None):
     '''
     This function creates the dataloaders in PyTorch from directory or npy files
     Args:
-        data_path:      [str] Path to data
+        splash_uri:     [str] Splash URI to Tagging Event UID for tracking purposes
         batch_size:     [int] Batch size
         num_workers:    [int] Number of workers
         shuffle:        [bool] Shuffle data
@@ -47,7 +47,7 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
     Returns:
         PyTorch DataLoaders
     '''
-    data_type = os.path.splitext(data_path)[-1]
+    # data_type = os.path.splitext(data_path)[-1]
 
     # Definition of data transforms
     data_transform = []
@@ -59,28 +59,29 @@ def get_dataloaders(data_path, batch_size, num_workers, shuffle=False, target_si
         data_transform.append(transforms.RandomVerticalFlip(p=vert_flip_prob))
 
     list_filenames = []
-    if data_type == '.npz' or data_type == '.npy':
-        if data_type == '.npz':
-            with np.load(data_path, mmap_mode=None, allow_pickle=False, fix_imports=True, encoding='ASCII') as file:
-                data = np.array(file[data_keyword])
-        else:
-            data = np.load(data_path)   # one single datafile
-        data = data.astype('float32')
-        if len(data.shape) == 3:
-            data = np.expand_dims(data, 3)
-        dataset = torch.tensor(data)
-        dataset = einops.rearrange(dataset, 'n x y c -> n c x y')
-        if target_size:
-            dataset = torch.nn.functional.interpolate(dataset, target_size)
-        (input_channels, width, height) = dataset.shape[1:]
-        dataset = CustomTensorDataset((dataset,dataset), transforms.Compose(data_transform))
-    else:
-        if target_size:
-            data_transform.append(transforms.Resize(target_size))
-        data_transform.append(transforms.ToTensor())
-        dataset = CustomDirectoryDataset(data_path, transforms.Compose(data_transform))
-        (input_channels, width, height) = dataset[0][0].shape
-        list_filenames = dataset.total_imgs
+    # if data_type == '.npz' or data_type == '.npy':
+    #     if data_type == '.npz':
+    #         with np.load(data_path, mmap_mode=None, allow_pickle=False, fix_imports=True, encoding='ASCII') as file:
+    #             data = np.array(file[data_keyword])
+    #     else:
+    #         data = np.load(data_path)   # one single datafile
+    #     data = data.astype('float32')
+    #     if len(data.shape) == 3:
+    #         data = np.expand_dims(data, 3)
+    #     dataset = torch.tensor(data)
+    #     dataset = einops.rearrange(dataset, 'n x y c -> n c x y')
+    #     if target_size:
+    #         dataset = torch.nn.functional.interpolate(dataset, target_size)
+    #     (input_channels, width, height) = dataset.shape[1:]
+    #     dataset = CustomTensorDataset((dataset,dataset), transforms.Compose(data_transform))
+    # else:
+    if target_size:
+        data_transform.append(transforms.Resize(target_size))
+    data_transform.append(transforms.ToTensor())
+    # dataset = CustomDirectoryDataset(data_path, transforms.Compose(data_transform))
+    dataset = CustomSplashDataset(splash_uri, transforms.Compose(data_transform))
+    (input_channels, width, height) = dataset[0][0].shape
+    list_filenames = dataset.total_imgs
 
     if val_pct:
         train_set, val_set = split_dataset(dataset, val_pct)

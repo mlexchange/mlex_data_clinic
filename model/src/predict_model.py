@@ -21,10 +21,10 @@ logging.getLogger("pytorch_lightning").setLevel(logging.WARNING)    # disable lo
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('input_dir', help='input directory')
-    parser.add_argument('model_dir', help='input directory')
-    parser.add_argument('output_dir', help='output directory')
-    parser.add_argument('parameters', help='list of training parameters')
+    parser.add_argument('-d', '--project_id', help='project id')
+    parser.add_argument('-m', '--model_dir', help='input directory')
+    parser.add_argument('-o', '--output_dir', help='output directory')
+    parser.add_argument('-p', '--parameters', help='list of training parameters')
     args = parser.parse_args()
     test_parameters = TestingParameters(**json.loads(args.parameters))
 
@@ -36,12 +36,15 @@ if __name__ == '__main__':
     else:
         target_size = None
 
-    [test_loader, temp], (temp_channels, temp_w, temp_h), filenames = get_dataloaders(args.input_dir,
-                                                                                      test_parameters.batch_size,
-                                                                                      NUM_WORKERS,
-                                                                                      False,
-                                                                                      target_size,
-                                                                                      data_keyword=test_parameters.data_key)
+    splash_uri = (f'http://splash:80/api/v0/datasets/search?page%5Blimit%5D={100000}', args.project_id)
+    [test_loader, temp], (temp_channels, temp_w, temp_h), filenames = \
+        get_dataloaders(
+            splash_uri,
+            test_parameters.batch_size,
+            NUM_WORKERS,
+            False,
+            target_size,
+            data_keyword=test_parameters.data_key)
 
     model = Autoencoder.load_from_checkpoint(args.model_dir + '/last.ckpt')
 
@@ -52,39 +55,44 @@ if __name__ == '__main__':
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    # Reorganize images in labelmaker's order
-    list_filenames = []
-    for dirpath, subdirs, files in os.walk(args.input_dir):
-        for file in files:
-            if os.path.splitext(file)[-1] in ['.tiff', '.tif', '.jpg', '.jpeg', '.png'] and not ('.' in os.path.splitext(file)[0]):
-                filename = os.path.join(dirpath, file)
-                list_filenames.append(filename)
-    loaders_filenames = [args.input_dir + '/' + x for x in filenames]
+    df = pd.DataFrame(test_img_embeds.cpu().detach().numpy())
+    df.index = filenames
+    df.columns = df.columns.astype(str)
+    df.to_parquet(f'{args.output_dir}/f_vectors.parquet', engine='pyarrow')
+    # # Reorganize images in labelmaker's order
+    # list_filenames = []
+    # for dirpath, subdirs, files in os.walk(args.input_dir):
+    #     for file in files:
+    #         if os.path.splitext(file)[-1] in ['.tiff', '.tif', '.jpg', '.jpeg', '.png'] and \
+    #             not ('.' in os.path.splitext(file)[0]):
+    #             filename = os.path.join(dirpath, file)
+    #             list_filenames.append(filename)
+    # loaders_filenames = [args.input_dir + '/' + x for x in filenames]
     
-    order = []
-    for count in range(len(loaders_filenames)):
-        if loaders_filenames[count] in list_filenames:
-            indx = loaders_filenames.index(list_filenames[count])
-            order.append(indx)
+    # order = []
+    # for count in range(len(loaders_filenames)):
+    #     if loaders_filenames[count] in list_filenames:
+    #         indx = loaders_filenames.index(list_filenames[count])
+    #         order.append(indx)
 
     # Retrieve distance matrix
-    #dist_matrix = np.zeros((test_img_embeds.shape[0], test_img_embeds.shape[0]))
-    test_img_embeds = test_img_embeds[order, ]
-    dist_matrix = np.zeros((len(list_filenames), len(list_filenames)))
-    for count, img_embed in enumerate(test_img_embeds):
-        dist = torch.cdist(img_embed[None,], test_img_embeds, p=2)
-        dist_matrix[count, :] = dist.squeeze(dim=0).detach().cpu().numpy()
+    # dist_matrix = np.zeros((test_img_embeds.shape[0], test_img_embeds.shape[0]))
+    # test_img_embeds = test_img_embeds[order, ]
+    # dist_matrix = np.zeros((len(list_filenames), len(list_filenames)))
+    # for count, img_embed in enumerate(test_img_embeds):
+    #     dist = torch.cdist(img_embed[None,], test_img_embeds, p=2)
+    #     dist_matrix[count, :] = dist.squeeze(dim=0).detach().cpu().numpy()
     
-    for row in range(dist_matrix.shape[0]):
-        info_row = dist_matrix[row, :]
-        temp = info_row.argsort()
-        dist_matrix[row, :] = temp.astype('int')  # ranks
-    dist_matrix = pd.DataFrame(dist_matrix)
-    if len(filenames) > 0:
-        dist_matrix['filename'] = list_filenames
-        dist_matrix.set_index('filename', inplace=True)
-    dist_matrix.columns = dist_matrix.columns.astype(str)
-    dist_matrix.to_parquet(args.output_dir + '/dist_matrix.parquet')
+    # for row in range(dist_matrix.shape[0]):
+    #     info_row = dist_matrix[row, :]
+    #     temp = info_row.argsort()
+    #     dist_matrix[row, :] = temp.astype('int')  # ranks
+    # dist_matrix = pd.DataFrame(dist_matrix)
+    # if len(filenames) > 0:
+    #     dist_matrix['filename'] = list_filenames
+    #     dist_matrix.set_index('filename', inplace=True)
+    # dist_matrix.columns = dist_matrix.columns.astype(str)
+    # dist_matrix.to_parquet(args.output_dir + '/dist_matrix.parquet')
 
     # Reconstructed images
     test_result = trainer.predict(model, dataloaders=test_loader)
@@ -92,9 +100,16 @@ if __name__ == '__main__':
     test_result = einops.rearrange(test_result, 'n c x y -> n x y c')
     test_result = test_result.cpu().detach().numpy()
 
-    for count in range(len(test_result)):
-        if loaders_filenames[count] in list_filenames:
-            indx = list_filenames.index(loaders_filenames[count])
-            im = Image.fromarray((((test_result[count]-np.min(test_result[count])) ) * 255).astype(np.uint8)).convert('L')
-            im.save(f'{args.output_dir}/{indx}.jpg')
-    #np.save(args.output_dir + '/reconstructed_images', test_result.cpu().detach().numpy())
+    # for count in range(len(test_result)):
+    #     if loaders_filenames[count] in list_filenames:
+    #         indx = list_filenames.index(loaders_filenames[count])
+    #         im = Image.fromarray((((test_result[count]-np.min(test_result[count])) ) * 255)\
+    #                              .astype(np.uint8)).convert('L')
+    #         im.save(f'{args.output_dir}/{indx}.jpg')
+
+    for indx, file in enumerate(filenames):
+        im = Image.fromarray((((test_result[indx]-np.min(test_result[indx])) ) * 255)\
+                                 .astype(np.uint8)).convert('L')
+        filename = file.split('/')[-1].split('.')[0]
+        im.save(f'{args.output_dir}/{filename}_reconstructed.jpg')
+    

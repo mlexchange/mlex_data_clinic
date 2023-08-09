@@ -19,9 +19,9 @@ logging.getLogger("pytorch_lightning").setLevel(logging.WARNING)    # disable lo
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('input_dir', help='input directory')
-    parser.add_argument('output_dir', help='output directory')
-    parser.add_argument('parameters', help='list of training parameters')
+    parser.add_argument('-d', '--project_id', help='project id')
+    parser.add_argument('-o', '--output_dir', help='output directory')
+    parser.add_argument('-p', '--parameters', help='list of training parameters')
     args = parser.parse_args()
     train_parameters = TrainingParameters(**json.loads(args.parameters))
 
@@ -40,19 +40,23 @@ if __name__ == '__main__':
     else:
         target_size = None
 
-    [train_loader, val_loader], (input_channels, width, height), tmp = get_dataloaders(args.input_dir,
-                                                                                       train_parameters.batch_size,
-                                                                                       NUM_WORKERS,
-                                                                                       train_parameters.shuffle,
-                                                                                       target_size,
-                                                                                       train_parameters.horz_flip_prob,
-                                                                                       train_parameters.vert_flip_prob,
-                                                                                       train_parameters.brightness,
-                                                                                       train_parameters.contrast,
-                                                                                       train_parameters.saturation,
-                                                                                       train_parameters.hue,
-                                                                                       train_parameters.data_key,
-                                                                                       train_parameters.val_pct)
+    splash_uri = (f'http://splash:80/api/v0/datasets/search?page%5Blimit%5D={100000}', args.project_id)
+    [train_loader, val_loader], (input_channels, width, height), tmp = \
+        get_dataloaders(
+            splash_uri,
+            train_parameters.batch_size,
+            NUM_WORKERS,
+            train_parameters.shuffle,
+            target_size,
+            train_parameters.horz_flip_prob,
+            train_parameters.vert_flip_prob,
+            train_parameters.brightness,
+            train_parameters.contrast,
+            train_parameters.saturation,
+            train_parameters.hue,
+            train_parameters.data_key,
+            train_parameters.val_pct
+        )
 
     trainer = pl.Trainer(default_root_dir=args.output_dir,
                          gpus=1 if str(device).startswith("cuda") else 0,

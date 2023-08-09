@@ -1,6 +1,6 @@
-TAG 			:= latest	
+TAG 			:= 0.1
 USER 			:= mlexchange1
-PROJECT			:= unsupervised-classifier
+PROJECT			:= autoencoder-pytorch
 
 IMG_WEB_SVC    		:= ${USER}/${PROJECT}:${TAG}
 IMG_WEB_SVC_JYP    	:= ${USER}/${PROJECT_JYP}:${TAG}
