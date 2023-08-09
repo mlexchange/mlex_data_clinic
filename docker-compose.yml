@@ -3,13 +3,13 @@ version: "3"
 services:
   front-end:
     restart: "unless-stopped"
-    container_name: "data_clinic"
+    container_name: "data_clinic_test"
     build:
       context: "."
       dockerfile: "docker/Dockerfile"
-    command: "python src/frontend.py"
     environment:
       DATA_DIR: "${PWD}/data"
+      HOST_NICKNAME: "local"
     volumes:
       - ${PWD}:/app/work
     ports:
