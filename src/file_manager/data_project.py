@@ -32,11 +32,11 @@ class DataProject:
             else:
                 self.data.append(LocalDataset(**item))
     
-    def init_from_splash(self, splash_uri):
+    def init_from_splash(self, splash_uri, project_id=None):
         '''
         Initialize the object from splash
         '''
-        datasets = requests.post(splash_uri[0], json={'project': splash_uri[1]}).json()
+        datasets = requests.post(splash_uri, json={'project': project_id}).json()
         self.init_from_dict(datasets)
         
     @staticmethod
@@ -103,21 +103,23 @@ class DataProject:
         Args:
             splash_uri:         URI to splash-ml service
         '''
-        validate_project_id = True
+        project_id = str(uuid4())
+        validate_project_id = False
         data_project_uris = [dataset.uri for dataset in self.data]
         # Get the project ID of first element
-        splash_dataset = requests.post(
-            f'{splash_uri}/datasets/search', json={'uris': [data_project_uris[0]]}).json()
-        project_id = splash_dataset[0]['project']
-        # Check that all the data sets in this project match the id
         splash_datasets = requests.post(
-            f'{splash_uri}/datasets/search?page%5Blimit%5D={len(self.data)+1}', 
-            json={'uris': data_project_uris,
-                  'project': project_id}
-            ).json()
-        if len(splash_datasets) != len(self.data):  # when there is no match, generate new project id
-            project_id = str(uuid4())
-            validate_project_id = False
+            f'{splash_uri}/datasets/search', json={'uris': [data_project_uris[0]]}).json()
+        for splash_dataset in splash_datasets:
+            # Check that all the data sets in this project match the id
+            splash_project = requests.post(
+                f'{splash_uri}/datasets/search?page%5Blimit%5D={len(self.data)+1}', 
+                json={'uris': data_project_uris,
+                    'project': splash_dataset['project']}
+                ).json()
+            if len(splash_project) == len(self.data):
+                project_id = splash_dataset['project']
+                validate_project_id = True
+                break
         self.project = project_id
         for dataset in self.data:
             dataset.project = self.project

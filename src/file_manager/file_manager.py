@@ -165,6 +165,7 @@ class FileManager():
         '''
         changed_id = dash.callback_context.triggered[0]['prop_id']
         project_id = dash.no_update
+        PROJECT_ID = os.getenv("PROJECT_ID")
         # prevent update according to update_data flag
         if 'import-dir' in changed_id and not update_data:
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, \
@@ -195,10 +196,13 @@ class FileManager():
             # should not be updated until a node (row) has been selected and imported
             selected_data = dash.no_update
         else:
+            print(f'This is the project id: {PROJECT_ID}')
             if len(data_project.data)>0:
                 # Thread(target=data_project.add_to_splash, args=(self.splash_uri, )).start()
                 data_project.add_to_splash(self.splash_uri)
                 project_id = data_project.project
+                if PROJECT_ID != project_id:
+                    os.environ['PROJECT_ID'] = project_id
             selected_data = data_project.get_dict()
         browse_data = DataProject(data=browse_data).get_table_dict()
         print(f'The project ID is {project_id} and the number of data sets is : {len(data_project.data)}')
