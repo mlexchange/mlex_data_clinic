@@ -1,19 +1,13 @@
-import base64
 import json
-import uuid, requests
 import pathlib
 
-from dash import Input, Output, State, callback, ALL
+from dash import Input, Output, State, callback
 import dash
-import numpy as np
-from PIL import Image
-import plotly
-import plotly.graph_objects as go
-import plotly.express as px
 
 from file_manager.data_project import DataProject
 from app_layout import USER, DATA_DIR
-from helper_utils import str_to_dict, get_counter, SimpleJob
+from utils.job_utils import str_to_dict, MlexJob, TableJob
+from utils.data_utils import prepare_directories
 
 
 @callback(
@@ -69,10 +63,8 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
                 return False, counters, 'no_row_selected'
         return True, counters, ''
     if 'submit.n_clicks' in changed_id:
-        counters = get_counter(USER)
-        experiment_id = str(uuid.uuid4())
-        out_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, experiment_id))
-        out_path.mkdir(parents=True, exist_ok=True)
+        counters = TableJob.get_counter(USER)
+        experiment_id, out_path, data_info = prepare_directories(USER, data_project, project_id)
         input_params = {}
         if bool(children):
             for child in children['props']['children']:
@@ -84,7 +76,7 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
         if action_selection == 'train_model':
             counters[0] = counters[0] + 1
             count = counters[0]
-            command = f"python3 src/train_model.py -d {project_id} -o {out_path}"
+            command = f"python3 src/train_model.py -d {data_info} -o {out_path}"
         else:
             counters[1] = counters[1] + 1
             count = counters[1]
@@ -94,10 +86,10 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
             train_params = str_to_dict(job_data[row[0]]['parameters'])
             json_dict['target_width'] = train_params['target_width']
             json_dict['target_height'] = train_params['target_height']
-            command = f"python3 src/predict_model.py -d {project_id} -m {model_path} -o {out_path}"
+            command = f"python3 src/predict_model.py -d {data_info} -m {model_path} -o {out_path}"
         if len(model_name)==0:      # if model_name was not defined
             model_name = f'{action_selection} {count}'
-        job = SimpleJob(service_type='backend',
+        job = MlexJob(service_type='backend',
                         description=model_name,
                         working_directory='{}'.format(DATA_DIR),
                         uri='mlexchange1/autoencoder-pytorch:0.1',

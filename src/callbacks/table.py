@@ -1,13 +1,11 @@
-from dash import dcc, Input, Output, State, callback, ALL
+from dash import dcc, Input, Output, State, callback
 import dash
 import plotly.graph_objects as go
-import plotly.express as px
 import requests
 
-from file_manager.data_project import DataProject
 from app_layout import USER
-from helper_utils import str_to_dict, generate_loss_plot, get_job
-from callbacks.simple_job import SimpleJob
+from utils.job_utils import TableJob
+from utils.plot_utils import generate_loss_plot
 
 
 @callback(
@@ -24,7 +22,7 @@ from callbacks.simple_job import SimpleJob
     Input('modal-close', 'n_clicks'),
 
     State('jobs-table', 'data'),
-    State('loss-plot', 'figure')
+    State('loss-plot', 'figure'),
 )
 def update_table(n, row, active_cell, close_clicks, current_job_table, current_fig):
     '''
@@ -49,11 +47,11 @@ def update_table(n, row, active_cell, close_clicks, current_job_table, current_f
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'modal-close.n_clicks' in changed_id:
         return dash.no_update, dash.no_update, dash.no_update, False, dash.no_update, None
-    job_list = get_job(USER, 'data_clinic')
+    job_list = TableJob.get_job(USER, 'data_clinic')
     data_table = []
     if job_list is not None:
         for job in job_list:
-            simple_job = SimpleJob.compute_job_to_simple_job(job)
+            simple_job = TableJob.compute_job_to_table_job(job)
             data_table.insert(0, simple_job.__dict__)
     is_open = dash.no_update
     log_display = dash.no_update
@@ -87,7 +85,6 @@ def update_table(n, row, active_cell, close_clicks, current_job_table, current_f
                         except Exception as e:
                             print(f'Loss plot exception {e}')
     if current_fig:
-        #if len(fig['data'])>0:
         try:
             if current_fig['data'][0]['x'] == list(fig['data'][0]['x']):
                 fig = dash.no_update
@@ -128,9 +125,9 @@ def delete_row(confirm_delete, delete, stop, row, job_data):
         return True
     elif 'stop-row.n_clicks' == changed_id:
         job_uid = job_data[row[0]]['job_id']
-        requests.patch(f'http://job-service:8080/api/v0/jobs/{job_uid}/terminate')
+        TableJob.terminate_job(job_uid)
         return False
     else:
         job_uid = job_data[row[0]]['job_id']
-        requests.delete(f'http://job-service:8080/api/v0/jobs/{job_uid}/delete')
+        TableJob.delete_job(job_uid)
         return False
