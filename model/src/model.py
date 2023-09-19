@@ -5,13 +5,14 @@ import natsort
 from PIL import Image
 from pydantic import BaseModel, Field
 import requests
-from tiled.client import from_uri
+# from tiled.client import from_uri
 from typing import Optional, List
 import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import Dataset, TensorDataset
 import pytorch_lightning as pl
+from torchvision import transforms
 
 
 class Optimizer(str, Enum):
@@ -304,37 +305,17 @@ class CustomTensorDataset(Dataset):
     def __len__(self):
         return self.tensors[0].size(0)
 
+
 class CustomDirectoryDataset(Dataset):
-    def __init__(self, main_dir, transform):
-        self.main_dir = main_dir
+    def __init__(self, data, transform):
         self.transform = transform
-        all_imgs = os.listdir(main_dir)
-        self.total_imgs = natsort.natsorted(all_imgs)
-
-    def __len__(self):
-        return len(self.total_imgs)
-
-    def __getitem__(self, idx):
-        img_loc = os.path.join(self.main_dir, self.total_imgs[idx])
-        image = Image.open(img_loc).convert("RGB")
-        tensor_image = self.transform(image)
-        return (tensor_image, tensor_image)
-
-class CustomSplashDataset(Dataset):
-    def __init__(self, splash_uri, transform):
-        self.transform = transform
-        datasets = requests.post(splash_uri[0], json={'project': splash_uri[1]}).json()
-        print(f'Number of data sets: {len(datasets)}')
-        self.data = [{'uri': dataset['uri'], 'type': dataset['type']} for dataset in datasets]
-        self.total_imgs = [dataset['uri'] for dataset in datasets]
+        self.data = data
+        self.simple_transform = transforms.ToTensor()
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        if self.data[idx]['type'] == 'file':
-            image = Image.open(self.data[idx]['uri']).convert("RGB")
-        else:
-            image = from_uri(self.data[idx]['uri'])
+        image = Image.open(self.data[idx]).convert("RGB")
         tensor_image = self.transform(image)
-        return (tensor_image, tensor_image)
+        return (tensor_image, self.simple_transform(image))

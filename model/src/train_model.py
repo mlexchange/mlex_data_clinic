@@ -19,7 +19,7 @@ logging.getLogger("pytorch_lightning").setLevel(logging.WARNING)    # disable lo
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--project_id', help='project id')
+    parser.add_argument('-d', '--data_info', help='path to dataframe of filepaths')
     parser.add_argument('-o', '--output_dir', help='output directory')
     parser.add_argument('-p', '--parameters', help='list of training parameters')
     args = parser.parse_args()
@@ -40,10 +40,9 @@ if __name__ == '__main__':
     else:
         target_size = None
 
-    splash_uri = (f'http://splash:80/api/v0/datasets/search?page%5Blimit%5D={100000}', args.project_id)
-    [train_loader, val_loader], (input_channels, width, height), tmp = \
+    [train_loader, val_loader], (input_channels, width, height), tmp, _ = \
         get_dataloaders(
-            splash_uri,
+            args.data_info,
             train_parameters.batch_size,
             NUM_WORKERS,
             train_parameters.shuffle,
