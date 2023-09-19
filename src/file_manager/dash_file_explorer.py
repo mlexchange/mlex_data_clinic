@@ -32,12 +32,12 @@ def create_file_explorer(max_file_size):
                                        'margin-right': '20px'},
                             ),
                             ################## BROWSE/IMPORT DATA FORMATS ##########################
-                            dbc.Label('Choose files/directories:', className='mr-2'),
+                            dbc.Label('Choose file formats:', className='mr-2'),
                             dbc.Row([
                                 dbc.Col(
                                     dbc.Row([
-                                        dbc.Col(dbc.InputGroupText('Browse Format: ',
-                                                                    style={'height': '2.5rem', 
+                                        dbc.Col(dbc.InputGroupText('Browse: ',
+                                                                    style={'height': '2.5rem',
                                                                            'margin-bottom': '10px',
                                                                            'width': '100%'}),
                                                 width=5),
@@ -62,9 +62,9 @@ def create_file_explorer(max_file_size):
                                 dbc.Col(
                                     dbc.Row([
                                         dbc.Col(
-                                            dbc.InputGroupText('Import Format: ',
-                                                               style={'height': '2.5rem', 
-                                                                        'width': '100%'}),
+                                            dbc.InputGroupText('Import: ',
+                                                               style={'height': '2.5rem',
+                                                                      'width': '100%'}),
                                                                width=5),
                                         dbc.Col(dcc.Dropdown(
                                                 id={'base_id': 'file-manager', 
@@ -87,15 +87,14 @@ def create_file_explorer(max_file_size):
                                     dbc.Button('Import',
                                                id={'base_id': 'file-manager', 'name': 'import-dir'},
                                                className='ms-auto',
-                                               color='secondary',
+                                               color='primary',
                                                size='sm',
-                                               outline=True,
                                                n_clicks=0,
                                                style={'width': '100%', 'height': '2.5rem'}
                                     ),
                                     width=2,
                                 ),
-                            ]),   
+                            ], className="g-2"),   
                             ###################### TILED FOR DATA ACCESS ###########################
                             dbc.Label('Load data through Tiled:', 
                                       style = {'margin-right': '10px',
@@ -108,21 +107,21 @@ def create_file_explorer(max_file_size):
                                                   id={'base_id': 'file-manager', 
                                                       'name': 'tiled-uri'})
                                     ]),
-                                    width=11
+                                    width=10
                                 ),
                                 dbc.Col(
                                     daq.BooleanSwitch(
                                         id={'base_id': 'file-manager', 'name': 'tiled-switch'},
                                         on=False,
-                                        color='green'
+                                        color='green',
+                                        style={'width': '100%'}
                                     ),
-                                    width=1
+                                    width=2
                                 ),
                                 dbc.Modal(
                                     children=[
                                         dbc.ModalHeader(dbc.ModalTitle("Warning")),
                                         dbc.ModalBody(children="Could not connect to Tiled"),
-                                        # dbc.ModalFooter([dbc.Button("OK")])
                                         ], 
                                     id={'base_id': 'file-manager', 'name': 'tiled-error'},
                                     is_open=False,
@@ -139,6 +138,7 @@ def create_file_explorer(max_file_size):
                                             {'name': 'URI', 'id': 'uri'}
                                         ],
                                         data = [],
+                                        page_size=5,
                                         hidden_columns = ['type'],
                                         row_selectable='single',
                                         style_cell={'padding': '0.5rem', 'textAlign': 'left'},
@@ -146,9 +146,9 @@ def create_file_explorer(max_file_size):
                                         css=[{'selector': '.show-hide', 'rule': 'display: none'}],
                                         style_data_conditional=[
                                             {'if': {'filter_query': '{file_type} = dir'},
-                                                'color': 'blue'},
+                                             'color': 'blue'},
                                             ],
-                                        style_table={'height':'18rem', 'overflowY': 'auto',
+                                        style_table={'overflowY': 'auto',
                                                      'margin-top': '10px'}
                                         ),
                                     dcc.Store(id={'base_id': 'file-manager', 

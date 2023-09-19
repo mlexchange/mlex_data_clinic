@@ -8,11 +8,12 @@ from file_manager.dataset.dataset import Dataset
 
 
 class TiledDataset(Dataset):
-    def __init__(self, uri, type='tiled', tags=[], project=None, **kwargs):
+    def __init__(self, uri, type='tiled', tags=[], project=None, uid=None, api_key=None, **kwargs):
         '''
         Definition of a tiled data set
         '''
-        super().__init__(uri, type, tags, project)
+        super().__init__(uri, type, tags, project, uid)
+        self.api_key=api_key
         pass
 
     def read_data(self, export='base64'):
@@ -23,16 +24,16 @@ class TiledDataset(Dataset):
             Dataset URI
         '''
         rawBytes = io.BytesIO()
-        tiled_data = from_uri(self.uri)
+        tiled_data = from_uri(self.uri, api_key=self.api_key)
         img = tiled_data.export(rawBytes, format='jpeg')
         rawBytes.seek(0)        # return to the start of the file
         if export=='pillow':
-            return Image.open(rawBytes), self.uri
+            return Image.open(rawBytes), self.uri, self.uid
         img = base64.b64encode(rawBytes.read())
-        return f'data:image/jpeg;base64,{img.decode("utf-8")}', self.uri
+        return f'data:image/jpeg;base64,{img.decode("utf-8")}', self.uri, self.uid
 
     @staticmethod
-    def browse_data(tiled_uri, browse_format, tiled_uris=[], tiled_client=None):
+    def browse_data(tiled_uri, browse_format, tiled_uris=[], tiled_client=None, api_key=None):
         '''
         Retrieve a list of nodes from tiled URI
         Args:
@@ -42,11 +43,12 @@ class TiledDataset(Dataset):
                                 recursively, defaults to []
             tiled_client:       Current tiled client, which is used when the method is run
                                 recursively, defaults to None
+            api_key:            Tiled API key
         Returns:
             tiled_uris:         List of tiled URIs found in tiled client
         '''
         if not tiled_client:
-            tiled_client = from_uri(tiled_uri)
+            tiled_client = from_uri(tiled_uri, api_key=api_key)
         if isinstance(tiled_client, Node):
             nodes = list(tiled_client)
             for node in nodes:
@@ -54,7 +56,7 @@ class TiledDataset(Dataset):
                 if browse_format != '**/' and isinstance(tiled_client[node], Node):
                     # Recursively browse data if a node is encounteres
                     TiledDataset.browse_data(mod_tiled_uri, browse_format, tiled_uris,
-                                            tiled_client=tiled_client[node])
+                                            tiled_client=tiled_client[node], api_key=api_key)
                 else:
                     tiled_uris.append(mod_tiled_uri)
         else:

@@ -13,5 +13,5 @@ plotly==5.4.0
 plotly-express==0.4.1
 scikit_image==0.18.3
 requests==2.26.0
-tiled[client]
+tiled[client]==0.1.0a103
 werkzeug>=2.2.3
