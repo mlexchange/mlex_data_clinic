@@ -35,7 +35,7 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.title = "Data Clinic"
 app._favicon = 'mlex.ico'
 dash_file_explorer = FileManager(DOCKER_DATA, UPLOAD_FOLDER_ROOT, open_explorer=False, 
-                                 api_key=TILED_KEY)
+                                 api_key=TILED_KEY, splash_uri=SPLASH_URI)
 dash_file_explorer.init_callbacks(app)
 du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 
