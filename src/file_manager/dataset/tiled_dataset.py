@@ -8,7 +8,7 @@ from file_manager.dataset.dataset import Dataset
 
 
 class TiledDataset(Dataset):
-    def __init__(self, uri, type='tiled', tags=[], project=None, uid=None, api_key=None, **kwargs):
+    def __init__(self, uri, type='tiled', tags=[], project=None, uid='1234', api_key=None, **kwargs):
         '''
         Definition of a tiled data set
         '''

@@ -17,7 +17,7 @@ NOT_ALLOWED_FORMATS = ['**/__pycache__/**', '**/.*', 'cache/**/', 'cache/**',
 
 
 class LocalDataset(Dataset):
-    def __init__(self, uri, type='file', tags=[], project=None, uid='123', **kwargs):
+    def __init__(self, uri, type='file', tags=[], project=None, uid='1234', **kwargs):
         '''
         Definition of a local data set
         '''
