@@ -131,7 +131,8 @@ class DataProject:
         if not validate_project_id:
             splash_uids = requests.post(f'{splash_uri}/datasets', json=datasets_dict).json()
             # update data sets uids to match splash-ml
-            self.data = [{**d, 'uid': uid} for d, uid in zip(datasets_dict, splash_uids)]
+            for indx in range(len(self.data)):
+                self.data[indx].uid = splash_uids[indx]
         pass
     
     def tiled_to_local_project(self, data_path, project_id):
