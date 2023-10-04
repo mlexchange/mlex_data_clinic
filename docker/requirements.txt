@@ -1,9 +1,10 @@
 dash==2.9.3
+dash[diskcache]
 dash_bootstrap_components==1.0.2
 dash_daq==0.5.0
 dash-uploader==0.6.0
 dash-component-editor==0.0.7
-flask==2.0.2
+flask==3.0.0
 imageio==2.9.0
 kaleido
 numpy==1.19.5
@@ -15,3 +16,4 @@ scikit_image==0.18.3
 requests==2.26.0
 tiled[client]==0.1.0a103
 werkzeug>=2.2.3
+diskcache==5.6.3

@@ -3,10 +3,12 @@ import pathlib
 
 import dash
 from dash import html
+from dash.long_callback import DiskcacheLongCallbackManager
 import dash_uploader as du
 import dash_bootstrap_components as dbc
+import diskcache
 
-from file_manager.file_manager import FileManager
+from file_manager.main import FileManager
 from components.header import header
 from components.job_table import job_table
 from components.loss import loss_plot
@@ -29,9 +31,13 @@ HOST_NICKNAME = str(os.environ['HOST_NICKNAME'])
 num_processors, num_gpus = get_host(HOST_NICKNAME)
 
 #### SETUP DASH APP ####
+cache = diskcache.Cache("./cache")
+long_callback_manager = DiskcacheLongCallbackManager(cache)
+
 external_stylesheets = [dbc.themes.BOOTSTRAP, "../assets/mlex-style.css",
-                        "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css",]
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+                        "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"]
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets, 
+                long_callback_manager=long_callback_manager)
 app.title = "Data Clinic"
 app._favicon = 'mlex.ico'
 dash_file_explorer = FileManager(DOCKER_DATA, UPLOAD_FOLDER_ROOT, open_explorer=False, 
