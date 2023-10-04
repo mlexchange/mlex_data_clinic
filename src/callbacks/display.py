@@ -1,6 +1,9 @@
+import pathlib
+
 from dash import Input, Output, State, callback, ALL
 import dash
 import numpy as np
+import pandas as pd
 from PIL import Image
 
 from app_layout import USER, TILED_KEY, SPLASH_URI
@@ -39,7 +42,7 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
         img_ind:            Index of image according to the slider value
         row:                Selected job (model) 
         data_table:         Data in table of jobs
-        file_paths:          Selected data files
+        file_paths:         Selected data files
         img_keyword:        Keyword for images in NPZ file
         npz_modal:          Open/close status of NPZ modal
         action_selection:   Action selection (train vs test)
@@ -76,9 +79,9 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
                     ls_plot = get_bottleneck(ls_var, target_width, target_height)
             else:
                 job_id = data_table[row[0]]['experiment_id']
-                dataset = data_table[row[0]]['dataset']
-                data_project.init_from_splash(f'{SPLASH_URI}/datasets/search', dataset, 
-                                              api_key=TILED_KEY)
+                data_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, job_id))
+                data_info = pd.read_parquet(f'{data_path}/data_info.parquet', engine='pyarrow')
+                data_project.init_from_dict(data_info.to_dict('records'), api_key=TILED_KEY)
                 reconstructed_path = 'data/mlexchange_store/{}/{}/'.format(USER, job_id)
                 try:
                     slider_max = len(data_project.data)
@@ -126,6 +129,7 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
 @callback(
     Output("warning-modal", "is_open"),
     Output("warning-msg", "children"),
+
     Input("warning-cause", "data"),
     Input("ok-button", "n_clicks"),
     State("warning-modal", "is_open"),
@@ -148,5 +152,8 @@ def toggle_warning_modal(warning_cause, ok_n_clicks, is_open):
         return not is_open, "Please select a trained model from the List of Jobs"
     if warning_cause == 'no_dataset':
         return not is_open, "Please upload the dataset before submitting the job."
+    if warning_cause == 'data_project_not_ready':
+        return not is_open, "The data project is still being created. Please try again \
+                             in a couple minutes."
     else:
         return False, ""

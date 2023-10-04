@@ -25,7 +25,7 @@ def prepare_directories(user_id, data_project, project_id):
     for dataset in data_project.data:
         uri_list.append(dataset.uri)
         uid_list.append(dataset.uid)
-    data_info = pd.DataFrame({'uri': uri_list, 'uid': uid_list})
+    data_info = pd.DataFrame({'uri': uri_list, 'uid': uid_list, 'type': ['file']*len(data_project.data)})
     if data_project.data[0].type == 'tiled':
         local_path = pathlib.Path(f'data/tiled_local_copy/{project_id}')
         data_info['local_uri'] = [f'{local_path}/{uid}.tif' for uid in uid_list]

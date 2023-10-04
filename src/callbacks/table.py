@@ -1,7 +1,6 @@
 from dash import dcc, Input, Output, State, callback
 import dash
 import plotly.graph_objects as go
-import requests
 
 from app_layout import USER
 from utils.job_utils import TableJob

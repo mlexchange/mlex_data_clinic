@@ -55,6 +55,8 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
     if 'execute.n_clicks' in changed_id:
         if len(data_project.data) == 0:
             return False, counters, 'no_dataset'
+        elif file_paths[0]['uid']=='1234':
+            return False, counters, 'data_project_not_ready'
         if action_selection != 'train_model' and not row:
             return False, counters, 'no_row_selected'
         if row:
