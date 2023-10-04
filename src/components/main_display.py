@@ -51,10 +51,11 @@ def main_display(loss_plot, job_table):
                             ], align="center", justify='center'),
                         dbc.Row(
                             dcc.Slider(id='img-slider',
-                                    min=0,
-                                    step=1,
-                                    marks=None,
-                                    value=0)
+                                       min=0,
+                                       step=1,
+                                       marks=None,
+                                       value=0,
+                                       tooltip={"placement": "bottom", "always_visible": True})
                             ),
                         ]), 
                         style={'margin-bottom': '0rem', 
