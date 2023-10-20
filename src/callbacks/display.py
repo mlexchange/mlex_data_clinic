@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
-from app_layout import USER, TILED_KEY, SPLASH_URI
+from app_layout import USER, TILED_KEY
 from file_manager.data_project import DataProject
 from utils.job_utils import str_to_dict
 from utils.plot_utils import get_bottleneck, plot_figure
@@ -29,23 +29,19 @@ from utils.plot_utils import get_bottleneck, plot_figure
     Input('jobs-table', 'selected_rows'),
     Input('jobs-table', 'data'),
 )
-def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, action_selection, row, \
+def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, action_selection, row,
                   data_table):
     '''
     This callback updates the images in the display
     Args:
-        import_dir:         Import button
-        confirm_import:     Confirm import button
+        file_paths:         Selected data files
         ls_var:             Latent space value
         target_width:       Target data width (if resizing)
         target_height:      Target data height (if resizing)
         img_ind:            Index of image according to the slider value
+        action_selection:   Action selection (train vs test)
         row:                Selected job (model) 
         data_table:         Data in table of jobs
-        file_paths:         Selected data files
-        img_keyword:        Keyword for images in NPZ file
-        npz_modal:          Open/close status of NPZ modal
-        action_selection:   Action selection (train vs test)
     Returns:
         img-output:         Output figure
         img-reconst-output: Reconstructed output (if prediction is selected, ow. blank image)
@@ -86,8 +82,8 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
                 try:
                     slider_max = len(data_project.data)
                     img_ind = min(slider_max, img_ind)
-                    uid = data_project.data[img_ind].uid
-                    reconst_img= Image.open(f'{reconstructed_path}reconstructed_{uid}.jpg')
+                    uri = data_project.data[img_ind].uri.split('/')[-1]
+                    reconst_img= Image.open(f'{reconstructed_path}reconstructed_{uri}.jpg')
                 except Exception as e:
                     print(f'Reconstructed images are not ready due to {e}')
                 indx = data_table[row[0]]['parameters'].find('Training Parameters:')
@@ -104,7 +100,7 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
             slider_max = len(data_project.data) - 1
             if img_ind > slider_max:
                 img_ind = 0
-            origimg, _, _ = data_project.data[img_ind].read_data(export='pillow')
+            origimg, _ = data_project.data[img_ind].read_data(export='pillow')
         except Exception as e:
             print(f'Exception in refresh_image callback {e}')
     if 'origimg' not in locals():
@@ -113,16 +109,9 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
     (width, height) = origimg.size
     if 'reconst_img' not in locals():
         reconst_img = Image.fromarray((np.zeros(origimg.size).astype(np.uint8)))
-    if target_width:
-        origimg = plot_figure(origimg.resize((target_width, target_height)))
-        recimg = plot_figure(reconst_img.resize((target_width, target_height)))
-        data_size = 'Original Image: (' + str(width) + 'x' + str(height) + '). Resized Image: (' + \
-                    str(target_width) + 'x' + str(target_height) + ').'
-    else:
-        origimg = plot_figure(origimg)
-        recimg = plot_figure(reconst_img)
-        data_size = 'Original Image: (' + str(width) + 'x' + str(height) + \
-                    '). Choose a trained model to update the graph.'
+    origimg = plot_figure(origimg.resize((target_width, target_height)))
+    recimg = plot_figure(reconst_img.resize((target_width, target_height)))
+    data_size = f'Original Image: ({width}x{height}). Resized Image: ({target_width}x{target_height}).'
     return origimg, recimg, ls_plot, slider_max, img_ind, data_size
 
 
@@ -142,6 +131,9 @@ def toggle_warning_modal(warning_cause, ok_n_clicks, is_open):
         warning_cause:      Cause that triggered the warning
         ok_n_clicks:        Close the warning
         is_open:            Close/open state of the warning
+    Returns:
+        is_open:            Close/open state of the warning
+         warning_msg:       Warning message
     '''
     changed_id = dash.callback_context.triggered[0]['prop_id']
     if 'ok-button.n_clicks' in changed_id:

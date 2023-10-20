@@ -108,9 +108,11 @@ def deselect_row(n_click):
 
 @callback(
     Output('delete-modal', 'is_open'),
+
     Input('confirm-delete-row', 'n_clicks'),
     Input('delete-row', 'n_clicks'),
     Input('stop-row', 'n_clicks'),
+
     State('jobs-table', 'selected_rows'),
     State('jobs-table', 'data'),
     prevent_initial_call=True
@@ -118,6 +120,14 @@ def deselect_row(n_click):
 def delete_row(confirm_delete, delete, stop, row, job_data):
     '''
     This callback deletes the selected model in the table
+    Args:
+        confirm_delete:     Number of clicks in confirm delete job button
+        delete:             Number of clicks in delete job button
+        stop:               Number of clicks in stop job button
+        row:                Row (job) selected from table
+        job_data:           Job table data
+    Returns:
+        Open/closes warning modal
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'delete-row.n_clicks' == changed_id:

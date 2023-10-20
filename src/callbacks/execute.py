@@ -42,12 +42,15 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
         action_selection:   Action selected
         job_data:           Lists of jobs
         row:                Selected row (job)
-        data_path:          Local path to data
+        file_paths:         Selected data files
         counters:           List of counters to assign a number to each job according to its action 
                             (train vs evaluate)
-        file_paths:         List of filenames within this dataset
+        model_name:         Model name/description assigned by the user
+        project_id:         Data project id
     Returns:
-        open/close the resources setup modal
+        open/close the resources setup modal, and submits the training/prediction job accordingly
+        counters:           Updates job counters if no model name was selected
+        warning_cause:      Activates a warning pop-up window if needed
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     data_project = DataProject()
@@ -55,8 +58,6 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
     if 'execute.n_clicks' in changed_id:
         if len(data_project.data) == 0:
             return False, counters, 'no_dataset'
-        elif file_paths[0]['uid']=='1234':
-            return False, counters, 'data_project_not_ready'
         if action_selection != 'train_model' and not row:
             return False, counters, 'no_row_selected'
         if row:
