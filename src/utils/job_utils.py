@@ -119,7 +119,9 @@ class MlexJob:
         '''
         workflow = {'user_uid': user,
                     'job_list': [self.__dict__],
-                    'host_list': ['mlsandbox.als.lbl.gov', 'local.als.lbl.gov', 'vaughan.als.lbl.gov'],
+                    'host_list': ['mlsandbox.als.lbl.gov',
+                                  'local.als.lbl.gov',
+                                  'vaughan.als.lbl.gov'],
                     'dependencies': {'0': []},
                     'requirements': {'num_processors': num_cpus,
                                      'num_gpus': num_gpus,
