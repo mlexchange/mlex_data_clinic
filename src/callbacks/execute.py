@@ -28,7 +28,8 @@ from utils.data_utils import prepare_directories
     State("counters", "data"),
     State("model-name", "value"),
     State({'base_id': 'file-manager', 'name': 'project-id'}, 'data'),
-    prevent_intial_call=True)
+    prevent_initial_call=True
+)
 def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job_data, row, file_paths,
             counters, model_name, project_id):
     '''
