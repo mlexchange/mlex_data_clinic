@@ -42,9 +42,11 @@ def sidebar(file_explorer, models, counters):
                         'Execute',
                         id='execute',
                         n_clicks=0,
-                        style={'width': '100%',
-                               'margin-left': '0px',
-                               'margin-top': '10px'}
+                        style={
+                            'width': '100%',
+                            'margin-left': '0px',
+                            'margin-top': '10px'
+                            }
                     )
                 ])
             ]

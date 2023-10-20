@@ -48,7 +48,8 @@ def header(app_title, github_url):
                                             dbc.NavItem(
                                                 dbc.Button(
                                                     className="fa fa-github",
-                                                    style={"font-size": "30px",
+                                                    style={
+                                                        "font-size": "30px",
                                                         "margin-right": "1rem",
                                                         "color": "#00313C",
                                                         'border': '0px',
@@ -60,7 +61,8 @@ def header(app_title, github_url):
                                             dbc.NavItem(
                                                 dbc.Button(
                                                     className="fa fa-question-circle-o",
-                                                    style={"font-size": "30px",
+                                                    style={
+                                                        "font-size": "30px",
                                                         "color": "#00313C",
                                                         "background-color": "white",
                                                         'border': '0px',

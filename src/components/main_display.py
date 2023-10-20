@@ -23,27 +23,36 @@ def main_display(loss_plot, job_table):
                         [
                             dbc.Row(
                                 [
-                                    html.Img(id='orig_img',
-                                             title="Input Image",
-                                             style={'width':'15vw', 
-                                                    'height': '200px', 
-                                                    'padding':'0px', 
-                                                    'display': 'inline-block'}
-                                            ),
-                                    html.Img(id='ls_graph',
-                                             title='',
-                                             style={'width':'30vw', 
-                                                    'height': '200px', 
-                                                    'padding':'0px', 
-                                                    'display': 'inline-block'}
-                                            ),
-                                    html.Img(id='rec_img',
-                                             title="Reconstructed Image",
-                                             style={'width':'15vw', 
-                                                    'height': '200px', 
-                                                    'padding':'0px', 
-                                                    'display': 'inline-block'}
-                                            )
+                                    html.Img(
+                                        id='orig_img',
+                                        title='Input Image',
+                                        style={
+                                            'width':'15vw', 
+                                            'height': '200px', 
+                                            'padding':'0px', 
+                                            'display': 'inline-block'
+                                            }
+                                        ),
+                                    html.Img(
+                                        id='ls_graph',
+                                        title='',
+                                        style={
+                                            'width':'30vw', 
+                                            'height': '200px', 
+                                            'padding':'0px', 
+                                            'display': 'inline-block'
+                                            }
+                                        ),
+                                    html.Img(
+                                        id='rec_img',
+                                        title='Reconstructed Image',
+                                        style={
+                                            'width':'15vw', 
+                                            'height': '200px', 
+                                            'padding':'0px', 
+                                            'display': 'inline-block'
+                                            }
+                                        )
                                 ],
                                 align="center",
                                 justify='center'
@@ -84,8 +93,10 @@ def main_display(loss_plot, job_table):
                                     step=1,
                                     marks=None,
                                     value=0,
-                                    tooltip={"placement": "bottom",
-                                             "always_visible": True}
+                                    tooltip={
+                                        "placement": "bottom",
+                                        "always_visible": True
+                                        }
                                     )
                             ),
                         ]
@@ -101,8 +112,10 @@ def main_display(loss_plot, job_table):
         ),
         html.Div(loss_plot),
         job_table,
-        dcc.Interval(id='interval',
-                     interval=5 * 1000,
-                     n_intervals=0),
+        dcc.Interval(
+            id='interval',
+            interval=5 * 1000,
+            n_intervals=0
+            ),
     ])
     return main_display

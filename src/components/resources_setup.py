@@ -18,19 +18,31 @@ def resources_setup(num_processors, num_gpus):
                         children=[
                             dbc.Row([
                                 dbc.Label(f'Number of CPUs (Maximum available: {num_processors})'),
-                                dbc.Input(id='num-cpus',
-                                          type="int",
-                                          value=2)]),
+                                dbc.Input(
+                                    id='num-cpus',
+                                    type="int",
+                                    value=2
+                                    )
+                                ]
+                            ),
                             dbc.Row([
                                 dbc.Label(f'Number of GPUs (Maximum available: {num_gpus})'),
-                                dbc.Input(id='num-gpus',
-                                          type="int",
-                                          value=0)]),
+                                dbc.Input(
+                                    id='num-gpus',
+                                    type="int",
+                                    value=0
+                                    )
+                                ]
+                            ),
                             dbc.Row([
                                 dbc.Label('Model Name'),
-                                dbc.Input(id='model-name',
-                                          type="str",
-                                          value="")])
+                                dbc.Input(
+                                    id='model-name',
+                                    type="str",
+                                    value=""
+                                    )
+                                ]
+                            )
                         ]),
                     dbc.ModalFooter(
                         dbc.Button(
