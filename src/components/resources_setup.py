@@ -19,22 +19,25 @@ def resources_setup(num_processors, num_gpus):
                             dbc.Row([
                                 dbc.Label(f'Number of CPUs (Maximum available: {num_processors})'),
                                 dbc.Input(id='num-cpus',
-                                        type="int",
-                                        value=2)]),
+                                          type="int",
+                                          value=2)]),
                             dbc.Row([
                                 dbc.Label(f'Number of GPUs (Maximum available: {num_gpus})'),
                                 dbc.Input(id='num-gpus',
-                                        type="int",
-                                        value=0)]),
+                                          type="int",
+                                          value=0)]),
                             dbc.Row([
                                 dbc.Label('Model Name'),
                                 dbc.Input(id='model-name',
-                                        type="str",
-                                        value="")])
+                                          type="str",
+                                          value="")])
                         ]),
                     dbc.ModalFooter(
                         dbc.Button(
-                            "Submit Job", id="submit", className="ms-auto", n_clicks=0
+                            "Submit Job",
+                            id="submit",
+                            className="ms-auto",
+                            n_clicks=0
                         )
                     ),
                 ],

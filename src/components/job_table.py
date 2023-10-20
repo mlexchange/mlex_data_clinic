@@ -12,20 +12,21 @@ def job_table():
                             [
                                 dbc.Col(
                                     dbc.Button("Deselect Row", 
-                                            id="deselect-row",
-                                            style={'width': '100%', 'margin-bottom': '1rem'})
+                                               id="deselect-row",
+                                               style={'width': '100%', 
+                                                      'margin-bottom': '1rem'})
                                 ),
                                 dbc.Col(
                                     dbc.Button("Stop Job", 
-                                            id="stop-row", 
-                                            color='warning',
-                                            style={'width': '100%'})
+                                               id="stop-row", 
+                                               color='warning',
+                                               style={'width': '100%'})
                                 ),
                                 dbc.Col(
                                     dbc.Button("Delete Job", 
-                                            id="delete-row", 
-                                            color='danger',
-                                            style={'width': '100%'})
+                                               id="delete-row", 
+                                               color='danger',
+                                               style={'width': '100%'})
                                 ),
                             ]
                         ),
@@ -42,7 +43,9 @@ def job_table():
                                 {'name': 'Logs', 'id': 'job_logs'}
                             ],
                             data=[],
-                            hidden_columns=['job_id', 'experiment_id', 'dataset'],
+                            hidden_columns=['job_id',
+                                            'experiment_id',
+                                            'dataset'],
                             row_selectable='single',
                             style_cell={'padding': '1rem',
                                         'textAlign': 'left',
@@ -50,26 +53,33 @@ def job_table():
                                         'textOverflow': 'ellipsis',
                                         'maxWidth': 0},
                             fixed_rows={'headers': True},
-                            css=[{"selector": ".show-hide", "rule": "display: none"}],
+                            css=[{"selector": ".show-hide",
+                                  "rule": "display: none"}],
                             page_size=8,
                             style_data_conditional=[
-                                {'if': {'column_id': 'status', 'filter_query': '{status} = complete'},
+                                {'if': {
+                                    'column_id': 'status',
+                                    'filter_query': '{status} = complete'
+                                    },
                                 'backgroundColor': 'green',
                                 'color': 'white'},
-                                {'if': {'column_id': 'status', 'filter_query': '{status} = failed'},
+                                {'if': {
+                                    'column_id': 'status',
+                                    'filter_query': '{status} = failed'
+                                    },
                                 'backgroundColor': 'red',
                                 'color': 'white'},
                             ],
                             style_table={'height': '30rem', 
-                                        'overflowY': 'auto'}
+                                         'overflowY': 'auto'}
                         )
                     ],
                 ),
             dbc.Modal(
                 [
                     dbc.ModalHeader("Warning"),
-                    dbc.ModalBody('Models cannot be recovered after deletion.  \
-                                    Do you still want to proceed?"'),
+                    dbc.ModalBody('Models cannot be recovered after deletion. Do you still want to \
+                                  proceed?"'),
                     dbc.ModalFooter([
                         dbc.Button(
                             "OK", 
@@ -87,9 +97,12 @@ def job_table():
             dbc.Modal([
                 dbc.ModalHeader("Job Logs"),
                 dbc.ModalBody(id='log-display'),
-                dbc.ModalFooter(dbc.Button("Close", 
-                                        id="modal-close", 
-                                        className="ml-auto")),
+                dbc.ModalFooter(
+                    dbc.Button("Close", 
+                               id="modal-close", 
+                               className="ml-auto"
+                               )
+                    ),
                 ],
                 id='log-modal',
                 size='xl')

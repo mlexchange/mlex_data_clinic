@@ -22,10 +22,8 @@ def sidebar(file_explorer, models, counters):
                         dcc.Dropdown(
                             id='action',
                             options=[
-                                {'label': 'Model Training', 
-                                'value': 'train_model'},
-                                {'label': 'Test Prediction using Model', 
-                                'value': 'prediction_model'},
+                                {'label': 'Model Training', 'value': 'train_model'},
+                                {'label': 'Test Prediction using Model', 'value': 'prediction_model'},
                             ],
                             value='train_model')
                     ]),
@@ -40,10 +38,14 @@ def sidebar(file_explorer, models, counters):
                         dbc.Label('Data'),
                         file_explorer,
                     ]),
-                    dbc.Button('Execute',
-                            id='execute',
-                            n_clicks=0,
-                            style={'width': '100%', 'margin-left': '0px', 'margin-top': '10px'})
+                    dbc.Button(
+                        'Execute',
+                        id='execute',
+                        n_clicks=0,
+                        style={'width': '100%',
+                               'margin-left': '0px',
+                               'margin-top': '10px'}
+                    )
                 ])
             ]
         ),

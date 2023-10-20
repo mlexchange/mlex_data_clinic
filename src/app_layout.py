@@ -34,9 +34,11 @@ num_processors, num_gpus = get_host(HOST_NICKNAME)
 cache = diskcache.Cache("./cache")
 long_callback_manager = DiskcacheLongCallbackManager(cache)
 
-external_stylesheets = [dbc.themes.BOOTSTRAP, "../assets/mlex-style.css",
+external_stylesheets = [dbc.themes.BOOTSTRAP,
+                        "../assets/mlex-style.css",
                         "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"]
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets, 
+app = dash.Dash(__name__,
+                external_stylesheets=external_stylesheets, 
                 long_callback_manager=long_callback_manager)
 app.title = "Data Clinic"
 app._favicon = 'mlex.ico'
