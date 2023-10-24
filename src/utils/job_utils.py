@@ -94,18 +94,20 @@ class MlexJob:
                  service_type,
                  description,
                  working_directory,
-                 uri,
-                 cmd,
-                 kwargs = None,
-                 mlex_app = 'data_clinic'):
+                 job_kwargs,
+                 mlex_app = 'data_clinic',
+                 status={'state': 'queue'},
+                 logs='',
+                 uid='',
+                 **kwargs):
+        self.uid = uid
         self.mlex_app = mlex_app
         self.description = description
         self.service_type = service_type
         self.working_directory = working_directory
-        self.job_kwargs = {'uri': uri,
-                           'type': 'docker',
-                           'cmd': cmd,
-                           'kwargs': kwargs}
+        self.job_kwargs = job_kwargs
+        self.status = status
+        self.logs = logs
     
     def submit(self, user, num_cpus, num_gpus):
         '''

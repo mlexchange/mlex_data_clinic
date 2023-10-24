@@ -7,7 +7,8 @@ import dash
 from file_manager.data_project import DataProject
 from app_layout import USER, DATA_DIR
 from utils.job_utils import str_to_dict, MlexJob, TableJob
-from utils.data_utils import prepare_directories
+from utils.data_utils import prepare_directories, get_input_params
+from utils.model_utils import get_model_content
 
 
 @callback(
@@ -28,10 +29,11 @@ from utils.data_utils import prepare_directories
     State("counters", "data"),
     State("model-name", "value"),
     State({'base_id': 'file-manager', 'name': 'project-id'}, 'data'),
+    State("model-selection", "value"),
     prevent_initial_call=True
 )
 def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job_data, row, file_paths,
-            counters, model_name, project_id):
+            counters, model_name, project_id, model_id):
     '''
     This callback submits a job request to the compute service according to the selected action & model
     Args:
@@ -48,6 +50,7 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
                             (train vs evaluate)
         model_name:         Model name/description assigned by the user
         project_id:         Data project id
+        model_id:           UID of model in content registry
     Returns:
         open/close the resources setup modal, and submits the training/prediction job accordingly
         counters:           Updates job counters if no model name was selected
@@ -62,25 +65,19 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
         if action_selection != 'train_model' and not row:
             return False, counters, 'no_row_selected'
         if row:
-            if action_selection != 'train_model' and \
-                job_data[row[0]]['job_type'].split()[0] != 'train_model':
+            if action_selection != 'train_model' and job_data[row[0]]['job_type']!='train_model':
                 return False, counters, 'no_row_selected'
         return True, counters, ''
     if 'submit.n_clicks' in changed_id:
+        model_uri, [train_cmd, prediction_cmd] = get_model_content(model_id)
         counters = TableJob.get_counter(USER)
         experiment_id, out_path, data_info = prepare_directories(USER, data_project, project_id)
-        input_params = {}
-        if bool(children):
-            for child in children['props']['children']:
-                key = child["props"]["children"][1]["props"]["id"]["param_key"]
-                value = child["props"]["children"][1]["props"]["value"]
-                input_params[key] = value
-        json_dict = input_params
+        input_params = get_input_params(children)
         kwargs = {}
         if action_selection == 'train_model':
             counters[0] = counters[0] + 1
             count = counters[0]
-            command = f"python3 src/train_model.py -d {data_info} -o {out_path}"
+            command = f"{train_cmd} -d {data_info} -o {out_path}"
         else:
             counters[1] = counters[1] + 1
             count = counters[1]
@@ -88,21 +85,27 @@ def execute(execute, submit, children, num_cpus, num_gpus, action_selection, job
             model_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, training_exp_id))
             kwargs = {'train_params': job_data[row[0]]['parameters']}
             train_params = str_to_dict(job_data[row[0]]['parameters'])
-            json_dict['target_width'] = train_params['target_width']
-            json_dict['target_height'] = train_params['target_height']
-            command = f"python3 src/predict_model.py -d {data_info} -m {model_path} -o {out_path}"
-        if len(model_name)==0:      # if model_name was not defined
-            model_name = f'{action_selection} {count}'
-        job = MlexJob(service_type='backend',
-                        description=model_name,
-                        working_directory='{}'.format(DATA_DIR),
-                        uri='mlexchange1/autoencoder-pytorch:0.1',
-                        cmd= f"{command} -p \'{json.dumps(json_dict)}\'",
-                        kwargs = {'job_type': action_selection,
-                                  'experiment_id': experiment_id,
-                                  'dataset': project_id,
-                                  'params': json_dict,
-                                  **kwargs})
+            # Get target size from training process
+            input_params['target_width'] = train_params['target_width']
+            input_params['target_height'] = train_params['target_height']
+            command = f"{prediction_cmd} -d {data_info} -m {model_path} -o {out_path}"
+        job = MlexJob(
+            service_type='backend',
+            description=f'{action_selection} {count}' if model_name=='' else model_name,
+            working_directory='{}'.format(DATA_DIR),
+            job_kwargs={
+                'uri': model_uri,
+                'type': 'docker',
+                'cmd': f"{command} -p \'{json.dumps(input_params)}\'",
+                'kwargs': {
+                    'job_type': action_selection,
+                    'experiment_id': experiment_id,
+                    'dataset': project_id,
+                    'params': input_params,
+                    **kwargs
+                    }
+                }
+            )
         job.submit(USER, num_cpus, num_gpus)
         return False, counters, ''
     return False, counters, ''

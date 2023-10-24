@@ -38,3 +38,22 @@ def prepare_directories(user_id, data_project, project_id, pattern = r'[/\\?%*:|
             data_project.tiled_to_local_project(project_id, data_info['local_uri'])
     data_info.to_parquet(f'{out_path}/data_info.parquet', engine='pyarrow')
     return experiment_id, out_path, f'{out_path}/data_info.parquet'
+
+
+def get_input_params(children):
+    '''
+    Gets the model parameters and its corresponding values
+    '''
+    input_params = {}
+    if bool(children):
+        try:
+            for child in children['props']['children']:
+                key = child["props"]["children"][1]["props"]["id"]["param_key"]
+                value = child["props"]["children"][1]["props"]["value"]
+                input_params[key] = value
+        except Exception:
+            for child in children:
+                key = child["props"]["children"][1]["props"]["id"]
+                value = child["props"]["children"][1]["props"]["value"]
+                input_params[key] = value
+    return input_params
