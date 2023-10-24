@@ -29,7 +29,7 @@ def load_parameters(model_selection, action_selection):
         app-parameters:     Parameters according to the selected model & action
     '''
     parameters = get_gui_components(model_selection, action_selection)
-    gui_item = JSONParameterEditor(_id={'type': str(uuid4())}, # pattern match _id (base id), name
+    gui_item = JSONParameterEditor(_id={'type': str(uuid4())},
                                    json_blob=parameters,
                                    )
     gui_item.init_callbacks(app)
