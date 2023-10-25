@@ -55,8 +55,7 @@ app.layout = html.Div(
         dbc.Container(
             [
                 dbc.Row(
-                    [dbc.Col(sidebar(dash_file_explorer.file_explorer, get_model_list(), 
-                                     TableJob.get_counter(USER)), 
+                    [dbc.Col(sidebar(dash_file_explorer.file_explorer, get_model_list()), 
                              width=4),
                      dbc.Col(main_display(loss_plot(), job_table()), 
                              width=8),

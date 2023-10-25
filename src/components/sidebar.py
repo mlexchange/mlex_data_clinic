@@ -2,14 +2,12 @@ from dash import html, dcc
 import dash_bootstrap_components as dbc
 
 
-def sidebar(file_explorer, models, counters):
+def sidebar(file_explorer, models):
     '''
     Creates the dash components in the left sidebar of the app
     Args:
         file_explorer:      Dash file explorer
         models:             Currently available ML algorithms in content registry
-        counters:           Init training and testing model counters to be used by default when no
-                            job description/name is added
     '''
     sidebar = [
         dbc.Card(
@@ -76,6 +74,5 @@ def sidebar(file_explorer, models, counters):
             is_open=False,
         ),
         dcc.Store(id='warning-cause', data=''),
-        dcc.Store(id='counters', data=counters)
     ]
     return sidebar

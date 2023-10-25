@@ -68,25 +68,6 @@ class TableJob:
     def delete_job(job_uid):
         requests.delete(f'{COMPUTE_URL}/jobs/{job_uid}/delete')
         pass
-    
-    @staticmethod
-    def get_counter(username):
-        job_list = TableJob.get_job(username, 'data_clinic')
-        job_types = ['train_model', 'prediction_model']
-        counters = [-1, -1]
-        if job_list is not None:
-            for indx, job_type in enumerate(job_types):
-                for job in reversed(job_list):
-                    last_job = job['job_kwargs']['kwargs']['job_type']
-                    if job['description']:
-                        job_name = job['description'].split()
-                    else:
-                        job_name = job['job_kwargs']['kwargs']['job_type'].split()
-                    if last_job == job_type and job_name[0] == job_type and len(job_name)==2 and job_name[-1].isdigit():
-                        value = int(job_name[-1])
-                        counters[indx] = value
-                        break
-        return counters
 
 
 class MlexJob:
