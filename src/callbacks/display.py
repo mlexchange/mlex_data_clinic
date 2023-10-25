@@ -1,4 +1,5 @@
 import pathlib
+import time
 
 from dash import Input, Output, State, callback, ALL
 import dash
@@ -52,58 +53,61 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     data_project = DataProject()
-    data_project.init_from_dict(file_paths)
-    if action_selection in ['train_model', 'transfer_learning']:
-        if len(ls_var) > 0:
-            ls_var = int(ls_var[0])
-            target_width = int(target_width[0])
-            target_height = int(target_height[0])
+    if row and len(row)>0 and data_table[row[0]]['job_type']=='train_model' and \
+        action_selection=='prediction_model':
+        data_project.init_from_dict(file_paths)
+        train_params = str_to_dict(data_table[row[0]]['parameters'])
+        ls_var = int(train_params['latent_dim'])
+        target_width = int(train_params['target_width'])
+        target_height = int(train_params['target_height'])
+        if changed_id != 'img-slider.value':
+            ls_plot = get_bottleneck(ls_var, target_width, target_height)
+        else:
+            ls_plot = dash.no_update
+    elif row and len(row)>0 and data_table[row[0]]['job_type']=='prediction_model':
+        job_id = data_table[row[0]]['experiment_id']
+        data_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, job_id))
+        data_info = pd.read_parquet(f'{data_path}/data_info.parquet', engine='pyarrow')
+        data_project.init_from_dict(data_info.to_dict('records'), api_key=TILED_KEY)
+        reconstructed_path = 'data/mlexchange_store/{}/{}/'.format(USER, job_id)
+        try:
+            slider_max = len(data_project.data)
+            img_ind = min(slider_max, img_ind)
+            uri = data_project.data[img_ind].uri.split('/')[-1]
+            reconst_img= Image.open(f'{reconstructed_path}reconstructed_{uri}.jpg')
+        except Exception as e:
+            print(f'Reconstructed images are not ready due to {e}')
+        train_params = data_table[row[0]]['parameters'].split('Training Parameters:')[-1]
+        train_params = str_to_dict(train_params)
+        ls_var = int(train_params['latent_dim'])
+        target_width = int(train_params['target_width'])
+        target_height = int(train_params['target_height'])
+        if changed_id != 'img-slider.value':
+            ls_plot = get_bottleneck(ls_var, target_width, target_height)
+        else:
+            ls_plot = dash.no_update
+    elif action_selection == 'train_model':
+        data_project.init_from_dict(file_paths)
+        target_width = int(target_width[0])
+        target_height = int(target_height[0])
+        ls_var = int(ls_var[0])
+        if changed_id != 'img-slider.value':
             ls_plot = get_bottleneck(ls_var, target_width, target_height)
         else:
             ls_plot = dash.no_update
     else:
-        ls_plot = get_bottleneck(1, 1, 1, False)
+        data_project.init_from_dict(file_paths)
+        if changed_id != 'img-slider.value':
+            ls_plot = get_bottleneck(1, 1, 1, False)
+        else:
+            ls_plot = dash.no_update
         target_width = None
-    if row:
-        if row[0] < len(data_table):
-            if data_table[row[0]]['job_type'].split()[0] == 'train_model':
-                if action_selection == 'prediction_model':
-                    train_params = str_to_dict(data_table[row[0]]['parameters'])
-                    ls_var = int(train_params['latent_dim'])
-                    target_width = int(train_params['target_width'])
-                    target_height = int(train_params['target_height'])
-                    ls_plot = get_bottleneck(ls_var, target_width, target_height)
-            else:
-                job_id = data_table[row[0]]['experiment_id']
-                data_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, job_id))
-                data_info = pd.read_parquet(f'{data_path}/data_info.parquet', engine='pyarrow')
-                data_project.init_from_dict(data_info.to_dict('records'), api_key=TILED_KEY)
-                reconstructed_path = 'data/mlexchange_store/{}/{}/'.format(USER, job_id)
-                try:
-                    slider_max = len(data_project.data)
-                    img_ind = min(slider_max, img_ind)
-                    uri = data_project.data[img_ind].uri.split('/')[-1]
-                    reconst_img= Image.open(f'{reconstructed_path}reconstructed_{uri}.jpg')
-                except Exception as e:
-                    print(f'Reconstructed images are not ready due to {e}')
-                indx = data_table[row[0]]['parameters'].find('Training Parameters:')
-                train_params = str_to_dict(data_table[row[0]]['parameters'][indx + 21:])
-                ls_var = int(train_params['latent_dim'])
-                target_width = int(train_params['target_width'])
-                target_height = int(train_params['target_height'])
-                if 'img-slider.value' in changed_id:
-                    ls_plot = dash.no_update
-                else:
-                    ls_plot = get_bottleneck(ls_var, target_width, target_height)
     if len(data_project.data) > 0:
-        try:
-            slider_max = len(data_project.data) - 1
-            if img_ind > slider_max:
-                img_ind = 0
-            origimg, _ = data_project.data[img_ind].read_data(export='pillow')
-        except Exception as e:
-            print(f'Exception in refresh_image callback {e}')
-    if 'origimg' not in locals():
+        slider_max = len(data_project.data) - 1
+        if img_ind > slider_max:
+            img_ind = 0
+        origimg, _ = data_project.data[img_ind].read_data(export='pillow')
+    else:
         origimg = Image.fromarray((np.zeros((32,32)).astype(np.uint8)))
         slider_max = 0
     (width, height) = origimg.size

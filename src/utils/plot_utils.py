@@ -99,47 +99,61 @@ def get_bottleneck(ls_var, width, height, annotations=True):
             line_color=color
             )
         )
-    fig.add_shape(type="rect",
-                  x0=-1,
-                  y0=ls_var/2,
-                  x1=1,
-                  y1=-ls_var/2,
-                  fillcolor="RoyalBlue",
-                  line_color="RoyalBlue")
-    fig.update_traces(marker_size=1,
-                      hoverinfo='skip')
+    fig.add_shape(
+        type="rect",
+        x0=-1,
+        y0=ls_var/2,
+        x1=1,
+        y1=-ls_var/2,
+        fillcolor="RoyalBlue",
+        line_color="RoyalBlue"
+        )
+    fig.update_traces(
+        marker_size=1,
+        hoverinfo='skip'
+        )
     if annotations:
-        fig.add_annotation(x=-187,
-                           y=-25,
-                           text=annotation1,
-                           textangle=270,
-                           font={'size': 28}
-                           )
-        fig.add_annotation(x=199,
-                           y=-25,
-                           text=annotation1,
-                           textangle=270,
-                           font={'size': 28}
-                           )
-        fig.add_annotation(x=-10,
-                           y=0,
-                           text=annotation2,
-                           textangle=270,
-                           font={'size': 28},
-                           showarrow=False)
-    fig.update_xaxes(range=[-200,200],
-                     showgrid=False,
-                     showticklabels=False,
-                     zeroline=False,
-                     fixedrange=True)
-    fig.update_yaxes(range=[-200,200],
-                     showgrid=False,
-                     showticklabels=False,
-                     zeroline=False,
-                     fixedrange=True)
-    fig.update_layout(plot_bgcolor='rgba(0,0,0,0)',
-                      paper_bgcolor='rgba(0,0,0,0)',
-                      margin=dict(l=0, r=0, t=0, b=0))
+        fig.add_annotation(
+            x=-187,
+            y=-25,
+            text=annotation1,
+            textangle=270,
+            font={'size': 28}
+            )
+        fig.add_annotation(
+            x=199,
+            y=-25,
+            text=annotation1,
+            textangle=270,
+            font={'size': 28}
+            )
+        fig.add_annotation(
+            x=-10,
+            y=0,
+            text=annotation2,
+            textangle=270,
+            font={'size': 28},
+            showarrow=False
+            )
+    fig.update_xaxes(
+        range=[-200,200],
+        showgrid=False,
+        showticklabels=False,
+        zeroline=False,
+        fixedrange=True
+        )
+    fig.update_yaxes(
+        range=[-200,200],
+        showgrid=False,
+        showticklabels=False,
+        zeroline=False,
+        fixedrange=True
+        )
+    fig.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=0, r=0, t=0, b=0)
+        )
     png = plotly.io.to_image(fig)
     png_base64 = base64.b64encode(png).decode('ascii')
     return "data:image/png;base64,{}".format(png_base64)
