@@ -11,7 +11,7 @@ from callbacks.download import toggle_storage_modal, disable_download
 from callbacks.execute import execute
 from callbacks.table import update_table, delete_row
 from dash_component_editor import JSONParameterEditor
-from utils.job_utils import str_to_dict, MlexJob, TableJob
+from utils.job_utils import str_to_dict, MlexJob
 from utils.data_utils import prepare_directories, get_input_params
 from utils.model_utils import get_gui_components, get_model_content
 
@@ -146,7 +146,7 @@ def submit_ml_job(submit, children, num_cpus, num_gpus, action_selection, job_da
             }
         )
     job.submit(USER, num_cpus, num_gpus)
-    return False, ''
+    return True
 
 
 if __name__ == "__main__":
