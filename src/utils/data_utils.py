@@ -28,8 +28,9 @@ def prepare_directories(user_id, data_project, project_id, pattern = r'[/\\?%*:|
     for dataset in data_project.data:
         uri_list.append(dataset.uri)
         uid_list.append(str(uuid.uuid4()))
-    data_info = pd.DataFrame({'uri': uri_list, 'type': ['file']*len(data_project.data)})
+    data_info = pd.DataFrame({'uri': uri_list})
     if data_project.data[0].type == 'tiled':
+        data_info['type'] = ['tiled']*len(data_project.data)
         cleaned_project_id = re.sub(pattern, '_', project_id)               # clean project_id
         local_path = pathlib.Path(f'data/tiled_local_copy/{cleaned_project_id}')
         if not local_path.exists():
@@ -39,6 +40,8 @@ def prepare_directories(user_id, data_project, project_id, pattern = r'[/\\?%*:|
             data_info.to_parquet(f'{local_path}/data_info.parquet', engine='pyarrow')
         else:
             data_info = pd.read_parquet(f'{local_path}/data_info.parquet', engine='pyarrow')
+    else:
+        data_info['type'] = ['file']*len(data_project.data)
     data_info.to_parquet(f'{out_path}/data_info.parquet', engine='pyarrow')
     return experiment_id, out_path, f'{out_path}/data_info.parquet'
 
