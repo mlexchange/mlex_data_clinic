@@ -36,6 +36,7 @@ def prepare_directories(user_id, data_project, project_id, pattern = r'[/\\?%*:|
             data_info['local_uri'] = [f'{local_path}/{uid}.tif' for uid in uid_list]
             local_path.mkdir(parents=True)
             data_project.tiled_to_local_project(project_id, data_info['local_uri'])
+            data_info.to_parquet(f'{local_path}/data_info.parquet', engine='pyarrow')
         else:
             data_info = pd.read_parquet(f'{local_path}/data_info.parquet', engine='pyarrow')
     data_info.to_parquet(f'{out_path}/data_info.parquet', engine='pyarrow')
