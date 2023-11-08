@@ -32,10 +32,12 @@ def prepare_directories(user_id, data_project, project_id, pattern = r'[/\\?%*:|
     if data_project.data[0].type == 'tiled':
         cleaned_project_id = re.sub(pattern, '_', project_id)               # clean project_id
         local_path = pathlib.Path(f'data/tiled_local_copy/{cleaned_project_id}')
-        data_info['local_uri'] = [f'{local_path}/{uid}.tif' for uid in uid_list]
         if not local_path.exists():
+            data_info['local_uri'] = [f'{local_path}/{uid}.tif' for uid in uid_list]
             local_path.mkdir(parents=True)
             data_project.tiled_to_local_project(project_id, data_info['local_uri'])
+        else:
+            data_info = pd.read_parquet(f'{local_path}/data_info.parquet', engine='pyarrow')
     data_info.to_parquet(f'{out_path}/data_info.parquet', engine='pyarrow')
     return experiment_id, out_path, f'{out_path}/data_info.parquet'
 
