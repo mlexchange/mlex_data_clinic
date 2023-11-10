@@ -7,7 +7,6 @@ COPY docker/requirements.txt requirements.txt
 RUN pip3 install --upgrade pip &&\
     pip3 install -r requirements.txt\
     pip install git+https://github.com/taxe10/mlex_file_manager
-RUN pip3 uninstall dash-component-editor==0.0.7 -y
 
 RUN git clone https://github.com/mlexchange/mlex_dash_component_editor
 WORKDIR /app/work
