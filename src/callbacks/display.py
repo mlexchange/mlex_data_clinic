@@ -3,6 +3,7 @@ import time
 
 from dash import Input, Output, State, callback, ALL
 import dash
+from dash.exceptions import PreventUpdate
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -53,10 +54,17 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
     '''
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     data_project = DataProject()
-    if row and len(row)>0 and data_table[row[0]]['job_type']=='train_model' and \
-        action_selection=='prediction_model':
+    if row and len(row)>0:
+        selected_job_type = data_table[row[0]]['job_type']
+    else:
+        selected_job_type = None
+    if selected_job_type in ['train_model', 'tune_model']:
         data_project.init_from_dict(file_paths)
-        train_params = str_to_dict(data_table[row[0]]['parameters'])
+        if selected_job_type == 'train_model':
+            train_params = str_to_dict(data_table[row[0]]['parameters'])
+        else:
+            train_params = data_table[row[0]]['parameters'].split('Training Parameters:')[-1]
+            train_params = str_to_dict(train_params)
         ls_var = int(train_params['latent_dim'])
         target_width = int(train_params['target_width'])
         target_height = int(train_params['target_height'])
@@ -64,7 +72,7 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
             ls_plot = get_bottleneck(ls_var, target_width, target_height)
         else:
             ls_plot = dash.no_update
-    elif row and len(row)>0 and data_table[row[0]]['job_type']=='prediction_model':
+    elif selected_job_type=='prediction_model':
         job_id = data_table[row[0]]['experiment_id']
         data_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, job_id))
         data_info = pd.read_parquet(f'{data_path}/data_info.parquet', engine='pyarrow')
@@ -73,8 +81,9 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
         try:
             slider_max = len(data_project.data)
             img_ind = min(slider_max, img_ind)
-            uri = data_project.data[img_ind].uri.split('/')[-1]
+            uri = data_project.data[img_ind].uri.split('/')[-1].split('.')[0]
             reconst_img= Image.open(f'{reconstructed_path}reconstructed_{uri}.jpg')
+            reconst_img = reconst_img.convert('L')
         except Exception as e:
             print(f'Reconstructed images are not ready due to {e}')
         train_params = data_table[row[0]]['parameters'].split('Training Parameters:')[-1]
@@ -88,25 +97,30 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
             ls_plot = dash.no_update
     elif action_selection == 'train_model':
         data_project.init_from_dict(file_paths)
-        target_width = int(target_width[0])
-        target_height = int(target_height[0])
-        ls_var = int(ls_var[0])
+        if len(target_height) > 0:
+            target_width = int(target_width[0])
+            target_height = int(target_height[0])
+            ls_var = int(ls_var[0])
+        else:
+            target_width = 32
+            target_height = 32
+            ls_var = 32
         if changed_id != 'img-slider.value':
             ls_plot = get_bottleneck(ls_var, target_width, target_height)
         else:
             ls_plot = dash.no_update
     else:
+        target_height, target_width = 32, 32
         data_project.init_from_dict(file_paths)
         if changed_id != 'img-slider.value':
             ls_plot = get_bottleneck(1, 1, 1, False)
         else:
             ls_plot = dash.no_update
-        target_width = None
     if len(data_project.data) > 0:
         slider_max = len(data_project.data) - 1
         if img_ind > slider_max:
             img_ind = 0
-        origimg, _ = data_project.data[img_ind].read_data(export='pillow')
+        origimg, _ = data_project.data[img_ind].read_data(export='pillow', resize=False)
     else:
         origimg = Image.fromarray((np.zeros((32,32)).astype(np.uint8)))
         slider_max = 0

@@ -113,21 +113,45 @@ def submit_ml_job(submit, children, num_cpus, num_gpus, action_selection, job_da
     '''
     data_project = DataProject()
     data_project.init_from_dict(file_paths)
-    model_uri, [train_cmd, prediction_cmd] = get_model_content(model_id)
+    model_uri, [train_cmd, prediction_cmd, tune_cmd] = get_model_content(model_id)
     experiment_id, out_path, data_info = prepare_directories(USER, data_project, project_id)
     input_params = get_input_params(children)
     kwargs = {}
+
     if action_selection == 'train_model':
         command = f"{train_cmd} -d {data_info} -o {out_path}"
-    else:
+
+    elif action_selection == 'tune_model':
         training_exp_id = job_data[row[0]]['experiment_id']
         model_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, training_exp_id))
         kwargs = {'train_params': job_data[row[0]]['parameters']}
         train_params = str_to_dict(job_data[row[0]]['parameters'])
+
         # Get target size from training process
         input_params['target_width'] = train_params['target_width']
         input_params['target_height'] = train_params['target_height']
+
+        # Define command to run
+        command = f"{tune_cmd} -d {data_info} -m {model_path} -o {out_path}"
+
+    else:
+        training_exp_id = job_data[row[0]]['experiment_id']
+        model_path = pathlib.Path('data/mlexchange_store/{}/{}'.format(USER, training_exp_id))
+        if job_data[row[0]]['job_type'] == 'train_model':
+            train_params = job_data[row[0]]['parameters']
+        else:
+            train_params = job_data[row[0]]['parameters'].split('Training Parameters:')[-1]
+
+        kwargs = {'train_params': train_params}
+        train_params = str_to_dict(train_params)
+
+        # Get target size from training process
+        input_params['target_width'] = train_params['target_width']
+        input_params['target_height'] = train_params['target_height']
+
+        # Define command to run
         command = f"{prediction_cmd} -d {data_info} -m {model_path} -o {out_path}"
+
     job = MlexJob(
         service_type='backend',
         description=model_name,

@@ -75,7 +75,7 @@ def update_table(n, row, active_cell, close_clicks, current_job_table, current_f
         if row[0] < len(data_table):
             log = data_table[row[0]]["job_logs"]
             if log:
-                if data_table[row[0]]['job_type'].split()[0] == 'train_model':
+                if data_table[row[0]]['job_type'] in ['train_model', 'tune_model']:
                     start = log.find('epoch')
                     if start > -1 and len(log) > start + 25:
                         try:

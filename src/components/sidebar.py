@@ -21,6 +21,7 @@ def sidebar(file_explorer, models):
                             id='action',
                             options=[
                                 {'label': 'Model Training', 'value': 'train_model'},
+                                {'label': 'Model Tuning', 'value': 'tune_model'},
                                 {'label': 'Test Prediction using Model', 'value': 'prediction_model'},
                             ],
                             value='train_model')

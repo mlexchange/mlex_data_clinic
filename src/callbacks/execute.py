@@ -39,7 +39,7 @@ def execute(execute, submit, action_selection, job_data, row, file_paths):
         elif action_selection != 'train_model' and not row:
             return False, 'no_row_selected'
         elif row:
-            if action_selection != 'train_model' and job_data[row[0]]['job_type']!='train_model':
+            if action_selection != 'train_model' and job_data[row[0]]['job_type']=='prediction_model':
                 return False, 'no_row_selected'
         return True, ''
     else:
