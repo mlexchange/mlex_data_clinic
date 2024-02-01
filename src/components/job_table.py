@@ -33,6 +33,13 @@ def job_table():
                                         )
                                 ),
                                 dbc.Col(
+                                    dbc.Button(
+                                        "Show Details", 
+                                        id="show-info",
+                                        style={'width': '100%', 'margin-bottom': '1rem'}
+                                        )
+                                ),
+                                dbc.Col(
                                     [
                                         dbc.Button(
                                             'Download Results',
@@ -87,7 +94,9 @@ def job_table():
                             data=[],
                             hidden_columns=['job_id',
                                             'experiment_id',
-                                            'dataset'],
+                                            'dataset',
+                                            'parameters',
+                                            'job_logs'],
                             row_selectable='single',
                             style_cell={'padding': '1rem',
                                         'textAlign': 'left',
@@ -97,7 +106,7 @@ def job_table():
                             fixed_rows={'headers': True},
                             css=[{"selector": ".show-hide",
                                   "rule": "display: none"}],
-                            page_size=8,
+                            page_size=4,
                             style_data_conditional=[
                                 {'if': {
                                     'column_id': 'status',
@@ -112,8 +121,7 @@ def job_table():
                                 'backgroundColor': 'red',
                                 'color': 'white'},
                             ],
-                            style_table={'height': '30rem', 
-                                         'overflowY': 'auto'}
+                            style_table={'overflowY': 'auto'}
                         )
                     ],
                 ),
@@ -137,8 +145,8 @@ def job_table():
                 is_open=False,
             ),
             dbc.Modal([
-                dbc.ModalHeader("Job Logs"),
-                dbc.ModalBody(id='log-display'),
+                dbc.ModalHeader("Job Information"),
+                dbc.ModalBody(id='info-display'),
                 dbc.ModalFooter(
                     dbc.Button(
                         "Close", 
@@ -147,7 +155,7 @@ def job_table():
                         )
                     ),
                 ],
-                id='log-modal',
+                id='info-modal',
                 size='xl')
         ]
     )
