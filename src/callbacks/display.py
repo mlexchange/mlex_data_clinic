@@ -21,7 +21,6 @@ from utils.plot_utils import get_bottleneck, plot_figure
     Output('img-slider', 'max'),
     Output('img-slider', 'value'),
     Output('data-size-out', 'children'),
-
     Input({'base_id': 'file-manager', 'name': "docker-file-paths"}, "data"),
     Input({'type': ALL, 'param_key': 'latent_dim', 'name': 'latent_dim', 'layer': 'input'}, 'value'),
     Input({'type': ALL, 'param_key': 'target_width', 'name': 'target_width'}, 'value'),
@@ -30,9 +29,10 @@ from utils.plot_utils import get_bottleneck, plot_figure
     Input('action', 'value'),
     Input('jobs-table', 'selected_rows'),
     Input('jobs-table', 'data'),
+    Input({'base_id': 'file-manager', 'name': 'log-toggle'}, 'on'),
 )
 def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, action_selection, row,
-                  data_table):
+                  data_table, log):
     '''
     This callback updates the images in the display
     Args:
@@ -44,6 +44,7 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
         action_selection:   Action selection (train vs test)
         row:                Selected job (model) 
         data_table:         Data in table of jobs
+        log:                Log toggle
     Returns:
         img-output:         Output figure
         img-reconst-output: Reconstructed output (if prediction is selected, ow. blank image)
@@ -81,9 +82,7 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
         try:
             slider_max = len(data_project.data)
             img_ind = min(slider_max, img_ind)
-            uri = data_project.data[img_ind].uri.split('/')[-1].split('.')[0]
-            reconst_img= Image.open(f'{reconstructed_path}reconstructed_{uri}.jpg')
-            reconst_img = reconst_img.convert('L')
+            reconst_img= Image.open(f'{reconstructed_path}reconstructed_{img_ind}.jpg')
         except Exception as e:
             print(f'Reconstructed images are not ready due to {e}')
         train_params = data_table[row[0]]['parameters'].split('Training Parameters:')[-1]
@@ -120,13 +119,15 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
         slider_max = len(data_project.data) - 1
         if img_ind > slider_max:
             img_ind = 0
-        origimg, _ = data_project.data[img_ind].read_data(export='pillow', resize=False)
+        origimg, _ = data_project.data[img_ind].read_data(export='pillow', resize=False, log=log)
     else:
         origimg = Image.fromarray((np.zeros((32,32)).astype(np.uint8)))
         slider_max = 0
     (width, height) = origimg.size
     if 'reconst_img' not in locals():
         reconst_img = Image.fromarray((np.zeros(origimg.size).astype(np.uint8)))
+    elif origimg.mode == 'L':
+        reconst_img = reconst_img.convert('L')
     origimg = plot_figure(origimg.resize((target_width, target_height)))
     recimg = plot_figure(reconst_img.resize((target_width, target_height)))
     data_size = f'Original Image: ({width}x{height}). Resized Image: ({target_width}x{target_height}).'
@@ -136,7 +137,6 @@ def refresh_image(file_paths, ls_var, target_width, target_height, img_ind, acti
 @callback(
     Output("warning-modal", "is_open"),
     Output("warning-msg", "children"),
-
     Input("warning-cause", "data"),
     Input("ok-button", "n_clicks"),
     State("warning-modal", "is_open"),

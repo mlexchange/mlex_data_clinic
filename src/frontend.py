@@ -42,9 +42,7 @@ def load_parameters(model_selection, action_selection):
 
 @app.long_callback(
     Output("download-out", "data"),
-
     Input("download-button", "n_clicks"),
-    
     State("jobs-table", "data"),
     State("jobs-table", "selected_rows"),
     manager=long_callback_manager,
@@ -71,9 +69,7 @@ def save_results(download, job_data, row):
 
 @app.long_callback(
     Output("job-alert-confirm", "is_open"),
-
     Input('submit', 'n_clicks'),
-
     State('app-parameters', 'children'),
     State('num-cpus', 'value'),
     State('num-gpus', 'value'),
@@ -84,7 +80,7 @@ def save_results(download, job_data, row):
     State("model-name", "value"),
     State({'base_id': 'file-manager', 'name': 'project-id'}, 'data'),
     State("model-selection", "value"),
-
+    State({'base_id': 'file-manager', 'name': 'log-toggle'}, 'on'),
     running=[
         (Output("job-alert", "is_open"), "True", "False")
     ],
@@ -92,7 +88,7 @@ def save_results(download, job_data, row):
     prevent_initial_call=True
 )
 def submit_ml_job(submit, children, num_cpus, num_gpus, action_selection, job_data, row, file_paths,
-            model_name, project_id, model_id):
+            model_name, project_id, model_id, log):
     '''
     This callback submits a job request to the compute service according to the selected action & model
     Args:
@@ -108,14 +104,18 @@ def submit_ml_job(submit, children, num_cpus, num_gpus, action_selection, job_da
         model_name:         Model name/description assigned by the user
         project_id:         Data project id
         model_id:           UID of model in content registry
+        log:                Log toggle
     Returns:
         open the alert indicating that the job was submitted
     '''
     data_project = DataProject()
     data_project.init_from_dict(file_paths)
+    data_project.project_id = project_id
     model_uri, [train_cmd, prediction_cmd, tune_cmd] = get_model_content(model_id)
-    experiment_id, out_path, data_info = prepare_directories(USER, data_project, project_id)
+    experiment_id, out_path, data_info = prepare_directories(USER, data_project, 
+                                                             train=(action_selection!='prediction_model'))
     input_params = get_input_params(children)
+    input_params['log'] = log
     kwargs = {}
 
     if action_selection == 'train_model':
@@ -160,6 +160,7 @@ def submit_ml_job(submit, children, num_cpus, num_gpus, action_selection, job_da
             'uri': model_uri,
             'type': 'docker',
             'cmd': f"{command} -p \'{json.dumps(input_params)}\'",
+            'container_kwargs': {'shm_size': '2gb'},
             'kwargs': {
                 'job_type': action_selection,
                 'experiment_id': experiment_id,
