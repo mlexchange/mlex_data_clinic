@@ -80,7 +80,7 @@ def save_results(download, job_data, row):
     State("action", "value"),
     State("jobs-table", "data"),
     State("jobs-table", "selected_rows"),
-    State({"base_id": "file-manager", "name": "docker-file-paths"}, "data"),
+    State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State("model-name", "value"),
     State({"base_id": "file-manager", "name": "project-id"}, "data"),
     State("model-selection", "value"),
@@ -97,7 +97,7 @@ def submit_ml_job(
     action_selection,
     job_data,
     row,
-    file_paths,
+    data_project_dict,
     model_name,
     project_id,
     model_id,
@@ -114,7 +114,7 @@ def submit_ml_job(
         action_selection:   Action selected
         job_data:           Lists of jobs
         row:                Selected row (job)
-        file_paths:         Selected data files
+        data_project_dict:  Data project information
         model_name:         Model name/description assigned by the user
         project_id:         Data project id
         model_id:           UID of model in content registry
@@ -122,8 +122,7 @@ def submit_ml_job(
     Returns:
         open the alert indicating that the job was submitted
     """
-    data_project = DataProject()
-    data_project.init_from_dict(file_paths)
+    data_project = DataProject.from_dict(data_project_dict)
     data_project.project_id = project_id
     model_uri, [train_cmd, prediction_cmd, tune_cmd] = get_model_content(model_id)
     experiment_id, out_path, data_info = prepare_directories(

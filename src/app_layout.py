@@ -51,8 +51,6 @@ dash_file_explorer = FileManager(
     UPLOAD_FOLDER_ROOT,
     open_explorer=False,
     api_key=TILED_KEY,
-    splash_uri=SPLASH_URL,
-    default_tiled_uri=DEFAULT_TILED_URI,
 )
 dash_file_explorer.init_callbacks(app)
 du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)

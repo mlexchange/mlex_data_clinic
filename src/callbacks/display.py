@@ -19,7 +19,7 @@ from utils.plot_utils import get_bottleneck, plot_figure
     Output("img-slider", "max"),
     Output("img-slider", "value"),
     Output("data-size-out", "children"),
-    Input({"base_id": "file-manager", "name": "docker-file-paths"}, "data"),
+    Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     Input(
         {
             "type": ALL,
@@ -40,7 +40,7 @@ from utils.plot_utils import get_bottleneck, plot_figure
     Input({"base_id": "file-manager", "name": "log-toggle"}, "on"),
 )
 def refresh_image(
-    file_paths,
+    data_project_dict,
     ls_var,
     target_width,
     target_height,
@@ -71,13 +71,12 @@ def refresh_image(
         data-size-out:      Size of uploaded data
     """
     changed_id = [p["prop_id"] for p in dash.callback_context.triggered][0]
-    data_project = DataProject()
     if row and len(row) > 0:
         selected_job_type = data_table[row[0]]["job_type"]
     else:
         selected_job_type = None
     if selected_job_type in ["train_model", "tune_model"]:
-        data_project.init_from_dict(file_paths)
+        data_project = DataProject.from_dict(data_project_dict)
         if selected_job_type == "train_model":
             train_params = str_to_dict(data_table[row[0]]["parameters"])
         else:
@@ -96,6 +95,7 @@ def refresh_image(
         job_id = data_table[row[0]]["experiment_id"]
         data_path = pathlib.Path("data/mlexchange_store/{}/{}".format(USER, job_id))
         data_info = pd.read_parquet(f"{data_path}/data_info.parquet", engine="pyarrow")
+        # TODO: Fix this
         data_project.init_from_dict(data_info.to_dict("records"), api_key=TILED_KEY)
         reconstructed_path = "data/mlexchange_store/{}/{}/".format(USER, job_id)
         try:
@@ -116,7 +116,7 @@ def refresh_image(
         else:
             ls_plot = dash.no_update
     elif action_selection == "train_model":
-        data_project.init_from_dict(file_paths)
+        data_project = DataProject.from_dict(data_project_dict)
         if len(target_height) > 0:
             target_width = int(target_width[0])
             target_height = int(target_height[0])
@@ -131,18 +131,22 @@ def refresh_image(
             ls_plot = dash.no_update
     else:
         target_height, target_width = 32, 32
-        data_project.init_from_dict(file_paths)
+        data_project = DataProject.from_dict(data_project_dict)
         if changed_id != "img-slider.value":
             ls_plot = get_bottleneck(1, 1, 1, False)
         else:
             ls_plot = dash.no_update
-    if len(data_project.data) > 0:
-        slider_max = len(data_project.data) - 1
+    if (
+        len(data_project.datasets) > 0
+        and data_project.datasets[-1].cumulative_data_count > 0
+    ):
+        slider_max = data_project.datasets[-1].cumulative_data_count - 1
         if img_ind > slider_max:
             img_ind = 0
-        origimg, _ = data_project.data[img_ind].read_data(
-            export="pillow", resize=False, log=log
+        origimg, _ = data_project.read_datasets(
+            indices=[img_ind], export="pillow", resize=False, log=log
         )
+        origimg = origimg[0]
     else:
         origimg = Image.fromarray((np.zeros((32, 32)).astype(np.uint8)))
         slider_max = 0
