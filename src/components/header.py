@@ -1,15 +1,15 @@
-from dash import html
 import dash_bootstrap_components as dbc
+from dash import html
 
 
 def header(app_title, github_url):
-    '''
+    """
     This header will exist at the top of the webpage rather than browser tab
     Args:
         app_title:      Title of dash app
         github_url:     URL to github repo
-    '''
-    header= dbc.Navbar(
+    """
+    header = dbc.Navbar(
         dbc.Container(
             [
                 dbc.Row(
@@ -17,7 +17,7 @@ def header(app_title, github_url):
                         dbc.Col(
                             html.Img(
                                 id="logo",
-                                src='assets/mlex.png',
+                                src="assets/mlex.png",
                                 height="60px",
                             ),
                             md="auto",
@@ -52,10 +52,10 @@ def header(app_title, github_url):
                                                         "font-size": "30px",
                                                         "margin-right": "1rem",
                                                         "color": "#00313C",
-                                                        'border': '0px',
+                                                        "border": "0px",
                                                         "background-color": "white",
-                                                        },
-                                                    href=github_url
+                                                    },
+                                                    href=github_url,
                                                 )
                                             ),
                                             dbc.NavItem(
@@ -65,8 +65,8 @@ def header(app_title, github_url):
                                                         "font-size": "30px",
                                                         "color": "#00313C",
                                                         "background-color": "white",
-                                                        'border': '0px',
-                                                        },
+                                                        "border": "0px",
+                                                    },
                                                     href="https://mlexchange.als.lbl.gov",
                                                 )
                                             ),

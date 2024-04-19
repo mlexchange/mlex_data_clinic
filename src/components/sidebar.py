@@ -1,14 +1,14 @@
-from dash import html, dcc
 import dash_bootstrap_components as dbc
+from dash import dcc
 
 
 def sidebar(file_explorer, models):
-    '''
+    """
     Creates the dash components in the left sidebar of the app
     Args:
         file_explorer:      Dash file explorer
         models:             Currently available ML algorithms in content registry
-    '''
+    """
     sidebar = [
         dbc.Accordion(
             id="sidebar",
@@ -20,81 +20,106 @@ def sidebar(file_explorer, models):
                 dbc.AccordionItem(
                     title="Model configuration",
                     children=[
-                        dbc.Row([
-                            dbc.Col(
-                                dbc.Label(
-                                    'Action',
-                                    style={'height': '100%', 'display': 'flex', 'align-items': 'center'}
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    dbc.Label(
+                                        "Action",
+                                        style={
+                                            "height": "100%",
+                                            "display": "flex",
+                                            "align-items": "center",
+                                        },
+                                    ),
+                                    width=2,
                                 ),
-                                width=2
-                            ),
-                            dbc.Col(
-                                dcc.Dropdown(
-                                    id='action',
-                                    options=[
-                                        {'label': 'Train', 'value': 'train_model'},
-                                        {'label': 'Tune', 'value': 'tune_model'},
-                                        {'label': 'Prediction', 'value': 'prediction_model'},
-                                    ],
-                                    value='train_model'
+                                dbc.Col(
+                                    dcc.Dropdown(
+                                        id="action",
+                                        options=[
+                                            {"label": "Train", "value": "train_model"},
+                                            {"label": "Tune", "value": "tune_model"},
+                                            {
+                                                "label": "Prediction",
+                                                "value": "prediction_model",
+                                            },
+                                        ],
+                                        value="train_model",
+                                    ),
+                                    width=10,
                                 ),
-                            width=10)
-                        ], className="mb-3"),
-                        dbc.Row([
-                            dbc.Col(
-                                dbc.Label(
-                                    'Model',
-                                    style={'height': '100%', 'display': 'flex', 'align-items': 'center'}
+                            ],
+                            className="mb-3",
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    dbc.Label(
+                                        "Model",
+                                        style={
+                                            "height": "100%",
+                                            "display": "flex",
+                                            "align-items": "center",
+                                        },
+                                    ),
+                                    width=2,
                                 ),
-                            width=2),
-                            dbc.Col(
-                                dcc.Dropdown(
-                                    id='model-selection',
-                                    options=models,
-                                    value=models[0]['value']),
-                            width=10)
-                        ], className="mb-3",),
-                        dbc.Card([
-                            dbc.CardBody(
-                                id='app-parameters',
-                                style={
-                                    'overflowY': 'scroll',
-                                    'height': '58vh',  # Adjust as needed
-                                }
+                                dbc.Col(
+                                    dcc.Dropdown(
+                                        id="model-selection",
+                                        options=models,
+                                        value=models[0]["value"],
+                                    ),
+                                    width=10,
                                 ),
-                        ]),
+                            ],
+                            className="mb-3",
+                        ),
+                        dbc.Card(
+                            [
+                                dbc.CardBody(
+                                    id="app-parameters",
+                                    style={
+                                        "overflowY": "scroll",
+                                        "height": "58vh",  # Adjust as needed
+                                    },
+                                ),
+                            ]
+                        ),
                         dbc.Button(
-                            'Execute',
-                            id='execute',
+                            "Execute",
+                            id="execute",
                             n_clicks=0,
                             style={
-                                'width': '100%',
-                                'margin-left': '0px',
-                                'margin-top': '10px'
-                                }
-                            )
-                        ]
-                    )
-                ]
+                                "width": "100%",
+                                "margin-left": "0px",
+                                "margin-top": "10px",
+                            },
+                        ),
+                    ],
+                ),
+            ],
         ),
         dbc.Modal(
             [
                 dbc.ModalHeader("Warning"),
                 dbc.ModalBody(id="warning-msg"),
-                dbc.ModalFooter([
-                    dbc.Button(
-                        "OK", 
-                        id="ok-button", 
-                        color='danger', 
-                        outline=False,
-                        className="ms-auto", 
-                        n_clicks=0
-                    ),
-                ]),
+                dbc.ModalFooter(
+                    [
+                        dbc.Button(
+                            "OK",
+                            id="ok-button",
+                            color="danger",
+                            outline=False,
+                            className="ms-auto",
+                            n_clicks=0,
+                        ),
+                    ]
+                ),
             ],
             id="warning-modal",
             is_open=False,
         ),
-        dcc.Store(id='warning-cause', data=''),
+        dcc.Store(id="warning-cause", data=""),
     ]
     return sidebar
