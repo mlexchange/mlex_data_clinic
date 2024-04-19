@@ -2,7 +2,7 @@ FROM python:3.9
 MAINTAINER THE MLEXCHANGE TEAM
 
 RUN ls
-COPY docker/requirements.txt requirements.txt
+COPY requirements.txt requirements.txt
 
 RUN pip3 install --upgrade pip &&\
     pip3 install -r requirements.txt\
