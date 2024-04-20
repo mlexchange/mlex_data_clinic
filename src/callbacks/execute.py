@@ -1,6 +1,5 @@
 import dash
 from dash import Input, Output, State, callback
-from file_manager.data_project import DataProject
 
 
 @callback(
@@ -11,10 +10,10 @@ from file_manager.data_project import DataProject
     State("action", "value"),
     State("jobs-table", "data"),
     State("jobs-table", "selected_rows"),
-    State({"base_id": "file-manager", "name": "docker-file-paths"}, "data"),
+    State({"base_id": "file-manager", "name": "total-num-data-points"}, "data"),
     prevent_initial_call=True,
 )
-def execute(execute, submit, action_selection, job_data, row, data_project_dict):
+def execute(execute, submit, action_selection, job_data, row, num_imgs):
     """
     This callback validates the ml model and opens the resources modal
     Args:
@@ -23,15 +22,14 @@ def execute(execute, submit, action_selection, job_data, row, data_project_dict)
         action_selection:   Action selected
         job_data:           Lists of jobs
         row:                Selected row (job)
-        data_project_dict:  Data project information
+        num_imgs:           Number of images
     Returns:
         open/close the resources setup modal, and submits the training/prediction job accordingly
         warning_cause:      Activates a warning pop-up window if needed
     """
     changed_id = [p["prop_id"] for p in dash.callback_context.triggered][0]
-    data_project = DataProject.from_dict(data_project_dict)
     if "execute.n_clicks" in changed_id:
-        if len(data_project.data) == 0:
+        if num_imgs == 0:
             return False, "no_dataset"
         elif action_selection != "train_model" and not row:
             return False, "no_row_selected"
