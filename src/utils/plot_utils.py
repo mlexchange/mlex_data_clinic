@@ -1,10 +1,4 @@
 import base64
-import sys
-
-if sys.version_info[0] < 3:
-    from StringIO import StringIO
-else:
-    from io import StringIO
 
 import pandas as pd
 import plotly
@@ -12,20 +6,15 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 
-def generate_loss_plot(log, start):
+def generate_loss_plot(loss_file_path):
     """
     Generate loss plot
     Args:
-        log:    job logs with the loss/accuracy per epoch
-        start:  index where the list of loss values start
+        loss_file_path:     Path to the loss file
     Returns:
         loss plot
     """
-    end = log.find("Train process completed")
-    if end == -1:
-        end = len(log)
-    log = log[start:end]
-    df = pd.read_csv(StringIO(log.replace("\n\n", "\n")), sep=",")
+    df = pd.read_csv(loss_file_path)
     df.set_index("epoch", inplace=True)
     try:
         fig = px.line(df, markers=True)

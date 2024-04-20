@@ -1,8 +1,10 @@
+import os
+
 import dash
 import plotly.graph_objects as go
 from dash import Input, Output, State, callback, dcc
 
-from app_layout import USER
+from app_layout import DATA_DIR, USER
 from utils.job_utils import TableJob
 from utils.plot_utils import generate_loss_plot
 
@@ -39,15 +41,12 @@ def update_table(n, row, current_job_table, current_fig):
     fig = go.Figure(go.Scatter(x=[], y=[]))
     show_plot = False
     if row and row[0] < len(data_table):
-        log = data_table[row[0]]["job_logs"]
-        if log and data_table[row[0]]["job_type"] in ["train_model", "tune_model"]:
-            start = log.find("epoch")
-            if start > -1 and len(log) > start + 25:
-                try:
-                    fig = generate_loss_plot(log, start)
-                    show_plot = True
-                except Exception as e:
-                    print(f"Loss plot exception {e}")
+        if data_table[row[0]]["job_type"] in ["train_model", "tune_model"]:
+            job_id = data_table[row[0]]["experiment_id"]
+            loss_file_path = f"{DATA_DIR}/mlex_store/{USER}/{job_id}/training_log.csv"
+            if os.path.exists(loss_file_path):
+                fig = generate_loss_plot(loss_file_path)
+                show_plot = True
     if current_fig:
         try:
             if current_fig["data"][0]["x"] == list(fig["data"][0]["x"]):
