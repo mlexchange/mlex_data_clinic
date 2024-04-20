@@ -93,11 +93,11 @@ def refresh_image(
             ls_plot = dash.no_update
     elif selected_job_type == "prediction_model":
         job_id = data_table[row[0]]["experiment_id"]
-        data_path = pathlib.Path("data/mlexchange_store/{}/{}".format(USER, job_id))
+        data_path = pathlib.Path("data/mlex_store/{}/{}".format(USER, job_id))
         data_info = pd.read_parquet(f"{data_path}/data_info.parquet", engine="pyarrow")
         # TODO: Fix this
         data_project.init_from_dict(data_info.to_dict("records"), api_key=TILED_KEY)
-        reconstructed_path = "data/mlexchange_store/{}/{}/".format(USER, job_id)
+        reconstructed_path = "data/mlex_store/{}/{}/".format(USER, job_id)
         try:
             slider_max = len(data_project.data)
             img_ind = min(slider_max, img_ind)

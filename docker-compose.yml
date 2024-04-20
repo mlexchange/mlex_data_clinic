@@ -6,18 +6,16 @@ services:
     container_name: "data_clinic"
     image: ghcr.io/mlexchange/mlex_data_clinic:master
     volumes:
-      - $READ_DIR:/app/work/data
-      - $WRITE_DIR:/app/work/mlex_store
+      - $DATA_DIR:/app/work/data
     environment:
-      READ_DIR_MOUNT: "${READ_DIR}"
-      WRITE_DIR_MOUNT: "${WRITE_DIR}"
-      READ_DIR: "/app/work/data"
-      WRITE_DIR: "/app/work/mlex_store"
+      DIR_MOUNT: "${DATA_DIR}"
+      DATA_DIR: "/app/work/data"
       MLEX_COMPUTE_URL: "${MLEX_COMPUTE_URL}"
       MLEX_CONTENT_URL: "${MLEX_CONTENT_URL}"
       HOST_NICKNAME: "local"
       TILED_KEY: "${TILED_KEY}"
       DEFAULT_TILED_URI: "${DEFAULT_TILED_URI}"
+      DEFAULT_TILED_QUERY: "${DEFAULT_TILED_QUERY}"
     ports:
       - 127.0.0.1:8072:8050
     networks:

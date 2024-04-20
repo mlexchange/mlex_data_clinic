@@ -1,9 +1,7 @@
 import os
-import pathlib
 
 import dash
 import dash_bootstrap_components as dbc
-import dash_uploader as du
 import diskcache
 from dash import html
 from dash.long_callback import DiskcacheLongCallbackManager
@@ -19,11 +17,10 @@ from utils.job_utils import get_host
 from utils.model_utils import get_model_list
 
 USER = "admin"
-DATA_DIR = os.getenv("DATA_DIR")
-DOCKER_DATA = pathlib.Path.home() / "data"
-UPLOAD_FOLDER_ROOT = DOCKER_DATA / "upload"
+DATA_DIR = os.getenv("DATA_DIR", "data")
 SPLASH_URL = os.getenv("SPLASH_URL")
 DEFAULT_TILED_URI = os.getenv("DEFAULT_TILED_URI")
+DEFAULT_TILED_QUERY = os.getenv("DEFAULT_TILED_QUERY")
 TILED_KEY = os.getenv("TILED_KEY")
 if TILED_KEY == "":
     TILED_KEY = None
@@ -47,13 +44,11 @@ app = dash.Dash(
 app.title = "Data Clinic"
 app._favicon = "mlex.ico"
 dash_file_explorer = FileManager(
-    DOCKER_DATA,
-    UPLOAD_FOLDER_ROOT,
+    DATA_DIR,
     open_explorer=False,
     api_key=TILED_KEY,
 )
 dash_file_explorer.init_callbacks(app)
-du.configure_upload(app, UPLOAD_FOLDER_ROOT, use_upload_id=False)
 
 # DEFINE LAYOUT
 app.layout = html.Div(

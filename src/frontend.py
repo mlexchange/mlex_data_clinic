@@ -1,4 +1,5 @@
 import json
+import os
 import pathlib
 import shutil
 from uuid import uuid4
@@ -6,7 +7,7 @@ from uuid import uuid4
 from dash import Input, Output, State, dcc
 from file_manager.data_project import DataProject
 
-from app_layout import DATA_DIR, USER, app, long_callback_manager
+from app_layout import USER, app, long_callback_manager
 from callbacks.display import refresh_image, toggle_warning_modal  # noqa: F401
 from callbacks.download import disable_download, toggle_storage_modal  # noqa: F401
 from callbacks.execute import execute  # noqa: F401
@@ -15,6 +16,8 @@ from dash_component_editor import JSONParameterEditor
 from utils.data_utils import get_input_params, prepare_directories
 from utils.job_utils import MlexJob, str_to_dict
 from utils.model_utils import get_gui_components, get_model_content
+
+DIR_MOUNT = os.getenv("DIR_MOUNT", "/data")
 
 
 @app.callback(
@@ -63,7 +66,7 @@ def save_results(download, job_data, row):
     if download and row:
         experiment_id = job_data[row[0]]["experiment_id"]
         experiment_path = pathlib.Path(
-            "data/mlexchange_store/{}/{}".format(USER, experiment_id)
+            "data/mlex_store/{}/{}".format(USER, experiment_id)
         )
         shutil.make_archive("/app/tmp/results", "zip", experiment_path)
         return dcc.send_file("/app/tmp/results.zip")
@@ -82,7 +85,6 @@ def save_results(download, job_data, row):
     State("jobs-table", "selected_rows"),
     State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State("model-name", "value"),
-    State({"base_id": "file-manager", "name": "project-id"}, "data"),
     State("model-selection", "value"),
     State({"base_id": "file-manager", "name": "log-toggle"}, "on"),
     running=[(Output("job-alert", "is_open"), "True", "False")],
@@ -99,7 +101,6 @@ def submit_ml_job(
     row,
     data_project_dict,
     model_name,
-    project_id,
     model_id,
     log,
 ):
@@ -116,14 +117,12 @@ def submit_ml_job(
         row:                Selected row (job)
         data_project_dict:  Data project information
         model_name:         Model name/description assigned by the user
-        project_id:         Data project id
         model_id:           UID of model in content registry
         log:                Log toggle
     Returns:
         open the alert indicating that the job was submitted
     """
     data_project = DataProject.from_dict(data_project_dict)
-    data_project.project_id = project_id
     model_uri, [train_cmd, prediction_cmd, tune_cmd] = get_model_content(model_id)
     experiment_id, out_path, data_info = prepare_directories(
         USER, data_project, train=(action_selection != "prediction_model")
@@ -137,9 +136,7 @@ def submit_ml_job(
 
     elif action_selection == "tune_model":
         training_exp_id = job_data[row[0]]["experiment_id"]
-        model_path = pathlib.Path(
-            "data/mlexchange_store/{}/{}".format(USER, training_exp_id)
-        )
+        model_path = pathlib.Path("data/mlex_store/{}/{}".format(USER, training_exp_id))
         kwargs = {"train_params": job_data[row[0]]["parameters"]}
         train_params = str_to_dict(job_data[row[0]]["parameters"])
 
@@ -152,9 +149,7 @@ def submit_ml_job(
 
     else:
         training_exp_id = job_data[row[0]]["experiment_id"]
-        model_path = pathlib.Path(
-            "data/mlexchange_store/{}/{}".format(USER, training_exp_id)
-        )
+        model_path = pathlib.Path("data/mlex_store/{}/{}".format(USER, training_exp_id))
         if job_data[row[0]]["job_type"] == "train_model":
             train_params = job_data[row[0]]["parameters"]
         else:
@@ -175,7 +170,7 @@ def submit_ml_job(
     job = MlexJob(
         service_type="backend",
         description=model_name,
-        working_directory="{}".format(DATA_DIR),
+        working_directory=DIR_MOUNT,
         job_kwargs={
             "uri": model_uri,
             "type": "docker",
@@ -184,7 +179,7 @@ def submit_ml_job(
             "kwargs": {
                 "job_type": action_selection,
                 "experiment_id": experiment_id,
-                "dataset": project_id,
+                "dataset": data_project.project_id,
                 "params": input_params,
                 **kwargs,
             },
