@@ -3,8 +3,10 @@ import uuid
 
 import pandas as pd
 
+from app_layout import DATA_DIR, TILED_KEY
 
-def prepare_directories(user_id, data_project, train=True, pattern=r'[/\\?%*:|"<>]'):
+
+def prepare_directories(user_id, data_project, train=True):
     """
     Prepare data directories that host experiment results and data movements processes for tiled
     If data is served through tiled, a local copy will be made for ML training and inference
@@ -13,7 +15,6 @@ def prepare_directories(user_id, data_project, train=True, pattern=r'[/\\?%*:|"<
         user_id:        User ID
         data_project:   List of data sets in the application
         train:          Flag to indicate if the data is used for training or inference
-        pattern:        List of patterns to remove from data set uri
     Returns:
         experiment_id:  ML experiment ID
         out_path:       Path were experiment results will be stored
@@ -21,20 +22,27 @@ def prepare_directories(user_id, data_project, train=True, pattern=r'[/\\?%*:|"<
                         current project
     """
     experiment_id = str(uuid.uuid4())
-    out_path = pathlib.Path(
-        "data/mlexchange_store/{}/{}".format(user_id, experiment_id)
-    )
+    out_path = pathlib.Path(f"{DATA_DIR}/mlex_store/{user_id}/{experiment_id}")
     out_path.mkdir(parents=True, exist_ok=True)
-    if data_project.data[0].type == "tiled" and train:
-        data_info = data_project.tiled_to_local_project()
-    else:
-        uri_list = []
-        data_type = []
-        for dataset in data_project.data:
-            uri_list.append(dataset.uri)
-            data_type.append(dataset.type)
+    data_type = data_project.data_type
+    if data_type == "tiled" and train:
+        # Download tiled data to local
+        uri_list = data_project.tiled_to_local_project(DATA_DIR)
         data_info = pd.DataFrame({"uri": uri_list})
-        data_info["type"] = data_type
+    elif data_type == "tiled":
+        # Save sub uris
+        data_info = pd.DataFrame({"root_uri": [data_project.root_uri]})
+        data_info["sub_uris"] = [dataset.uri for dataset in data_project.datasets]
+        data_info["api_key"] = [TILED_KEY]
+    else:
+        # Save filenames
+        uri_list = []
+        for dataset in data_project.dataset:
+            uri_list.extend([dataset.uri + filename for filename in dataset.filenames])
+        data_info = pd.DataFrame(
+            {"uri": [data_project.root_uri + uri for uri in uri_list]}
+        )
+    data_info["type"] = data_type
     data_info.to_parquet(f"{out_path}/data_info.parquet", engine="pyarrow")
     return experiment_id, out_path, f"{out_path}/data_info.parquet"
 
