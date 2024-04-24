@@ -8,7 +8,7 @@ from uuid import uuid4
 from dash import Input, Output, State, dcc
 from file_manager.data_project import DataProject
 
-from app_layout import USER, app, long_callback_manager
+from app_layout import DATA_DIR, USER, app, long_callback_manager
 from callbacks.display import (  # noqa: F401
     close_warning_modal,
     open_warning_modal,
@@ -74,9 +74,7 @@ def save_results(download, job_data, row):
     """
     if download and row:
         experiment_id = job_data[row[0]]["experiment_id"]
-        experiment_path = pathlib.Path(
-            "data/mlex_store/{}/{}".format(USER, experiment_id)
-        )
+        experiment_path = pathlib.Path(f"{DATA_DIR}/mlex_store/{USER}/{experiment_id}")
         shutil.make_archive("/app/tmp/results", "zip", experiment_path)
         return dcc.send_file("/app/tmp/results.zip")
     else:
@@ -145,7 +143,7 @@ def submit_ml_job(
 
     elif action_selection == "tune_model":
         training_exp_id = job_data[row[0]]["experiment_id"]
-        model_path = pathlib.Path("data/mlex_store/{}/{}".format(USER, training_exp_id))
+        model_path = pathlib.Path(f"{DATA_DIR}/mlex_store/{USER}/{training_exp_id}")
         kwargs = {"train_params": job_data[row[0]]["parameters"]}
         train_params = str_to_dict(job_data[row[0]]["parameters"])
 
@@ -158,7 +156,7 @@ def submit_ml_job(
 
     else:
         training_exp_id = job_data[row[0]]["experiment_id"]
-        model_path = pathlib.Path("data/mlex_store/{}/{}".format(USER, training_exp_id))
+        model_path = pathlib.Path(f"{DATA_DIR}/mlex_store/{USER}/{training_exp_id}")
         if job_data[row[0]]["job_type"] == "train_model":
             train_params = job_data[row[0]]["parameters"]
         else:

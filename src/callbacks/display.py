@@ -8,7 +8,7 @@ from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 from PIL import Image
 
-from app_layout import USER
+from app_layout import DATA_DIR, USER
 from utils.job_utils import str_to_dict
 from utils.plot_utils import get_bottleneck, plot_figure
 
@@ -120,7 +120,7 @@ def update_slider_boundaries_prediction(
     # If selected job type is train_model or tune_model
     if selected_job_type == "prediction_model":
         job_id = data_table[row[0]]["experiment_id"]
-        data_path = pathlib.Path("data/mlex_store/{}/{}".format(USER, job_id))
+        data_path = pathlib.Path(f"{DATA_DIR}/mlex_store/{USER}/{job_id}")
 
         with open(f"{data_path}/.file_manager_vars.pkl", "rb") as file:
             data_project_dict = pickle.load(file)
@@ -211,7 +211,7 @@ def refresh_image(
 
     if selected_job_type == "prediction_model":
         job_id = data_table[row[0]]["experiment_id"]
-        data_path = pathlib.Path("data/mlex_store/{}/{}".format(USER, job_id))
+        data_path = pathlib.Path(f"{DATA_DIR}/mlex_store/{USER}/{job_id}")
 
         with open(f"{data_path}/.file_manager_vars.pkl", "rb") as file:
             data_project_dict = pickle.load(file)
@@ -267,9 +267,11 @@ def refresh_reconstruction(
 
     if selected_job_type == "prediction_model":
         job_id = data_table[row[0]]["experiment_id"]
-        reconstructed_path = "data/mlex_store/{}/{}/".format(USER, job_id)
-        if os.path.exists(f"{reconstructed_path}reconstructed_{img_ind}.jpg"):
-            reconst_img = Image.open(f"{reconstructed_path}reconstructed_{img_ind}.jpg")
+        reconstructed_path = f"{DATA_DIR}/mlex_store/{USER}/{job_id}"
+        if os.path.exists(f"{reconstructed_path}/reconstructed_{img_ind}.jpg"):
+            reconst_img = Image.open(
+                f"{reconstructed_path}/reconstructed_{img_ind}.jpg"
+            )
         else:
             reconst_img = Image.fromarray(
                 (np.zeros((target_size[1], target_size[0])).astype(np.uint8))
