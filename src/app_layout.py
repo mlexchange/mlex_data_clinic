@@ -3,7 +3,7 @@ import os
 import dash
 import dash_bootstrap_components as dbc
 import diskcache
-from dash import html
+from dash import dcc, html
 from dash.long_callback import DiskcacheLongCallbackManager
 from file_manager.main import FileManager
 
@@ -69,6 +69,7 @@ app.layout = html.Div(
                     ]
                 ),
                 resources_setup(num_processors, num_gpus),
+                dcc.Store(id="current-target-size", data=[0, 0]),
             ],
             fluid=True,
         ),

@@ -1,25 +1,21 @@
+import os
 import pathlib
+import pickle
 
-import dash
 import numpy as np
-import pandas as pd
 from dash import ALL, Input, Output, State, callback
+from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 from PIL import Image
 
-from app_layout import TILED_KEY, USER
+from app_layout import USER
 from utils.job_utils import str_to_dict
 from utils.plot_utils import get_bottleneck, plot_figure
 
 
 @callback(
-    Output("orig_img", "src"),
-    Output("rec_img", "src"),
+    Output("current-target-size", "data"),
     Output("ls_graph", "src"),
-    Output("img-slider", "max"),
-    Output("img-slider", "value"),
-    Output("data-size-out", "children"),
-    Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     Input(
         {
             "type": ALL,
@@ -33,167 +29,303 @@ from utils.plot_utils import get_bottleneck, plot_figure
     Input(
         {"type": ALL, "param_key": "target_height", "name": "target_height"}, "value"
     ),
-    Input("img-slider", "value"),
-    Input("action", "value"),
     Input("jobs-table", "selected_rows"),
     Input("jobs-table", "data"),
-    Input({"base_id": "file-manager", "name": "log-toggle"}, "on"),
+    State("action", "value"),
+    prevent_initial_call=True,
 )
-def refresh_image(
-    data_project_dict,
+def refresh_bottleneck(
     ls_var,
     target_width,
     target_height,
-    img_ind,
-    action_selection,
     row,
     data_table,
-    log,
+    action_selection,
 ):
     """
-    This callback updates the images in the display
+    This callback refreshes the bottleneck plot according to the selected job type
     Args:
-        file_paths:         Selected data files
         ls_var:             Latent space value
-        target_width:       Target data width (if resizing)
-        target_height:      Target data height (if resizing)
-        img_ind:            Index of image according to the slider value
-        action_selection:   Action selection (train vs test)
-        row:                Selected job (model)
-        data_table:         Data in table of jobs
-        log:                Log toggle
+        target_width:       Target width
+        target_height:      Target height
+        row:                Selected row (job)
+        data_table:         Lists of jobs
+        action_selection:   Action selected
     Returns:
-        img-output:         Output figure
-        img-reconst-output: Reconstructed output (if prediction is selected, ow. blank image)
-        latent-space-plot:  Graphical representation of latent space definition
-        img-slider-max:     Maximum value of the slider according to the dataset (train vs test)
-        img-slider-value:   Value of the slider according to the dataset length
-        data-size-out:      Size of uploaded data
+        current-target-size:    Target size
+        ls_graph:               Bottleneck plot
     """
-    changed_id = [p["prop_id"] for p in dash.callback_context.triggered][0]
+    # Get selected job type
     if row and len(row) > 0:
         selected_job_type = data_table[row[0]]["job_type"]
     else:
         selected_job_type = None
-    if selected_job_type in ["train_model", "tune_model"]:
-        data_project = DataProject.from_dict(data_project_dict)
+
+    # If selected job type is train_model or tune_model
+    if selected_job_type:
         if selected_job_type == "train_model":
-            train_params = str_to_dict(data_table[row[0]]["parameters"])
+            train_params = data_table[row[0]]["parameters"]
         else:
             train_params = data_table[row[0]]["parameters"].split(
                 "Training Parameters:"
             )[-1]
-            train_params = str_to_dict(train_params)
-        ls_var = int(train_params["latent_dim"])
-        target_width = int(train_params["target_width"])
-        target_height = int(train_params["target_height"])
-        if changed_id != "img-slider.value":
-            ls_plot = get_bottleneck(ls_var, target_width, target_height)
-        else:
-            ls_plot = dash.no_update
-    elif selected_job_type == "prediction_model":
-        job_id = data_table[row[0]]["experiment_id"]
-        data_path = pathlib.Path("data/mlex_store/{}/{}".format(USER, job_id))
-        data_info = pd.read_parquet(f"{data_path}/data_info.parquet", engine="pyarrow")
-        # TODO: Fix this
-        data_project.init_from_dict(data_info.to_dict("records"), api_key=TILED_KEY)
-        reconstructed_path = "data/mlex_store/{}/{}/".format(USER, job_id)
-        try:
-            slider_max = len(data_project.data)
-            img_ind = min(slider_max, img_ind)
-            reconst_img = Image.open(f"{reconstructed_path}reconstructed_{img_ind}.jpg")
-        except Exception as e:
-            print(f"Reconstructed images are not ready due to {e}")
-        train_params = data_table[row[0]]["parameters"].split("Training Parameters:")[
-            -1
-        ]
+
         train_params = str_to_dict(train_params)
         ls_var = int(train_params["latent_dim"])
         target_width = int(train_params["target_width"])
         target_height = int(train_params["target_height"])
-        if changed_id != "img-slider.value":
-            ls_plot = get_bottleneck(ls_var, target_width, target_height)
-        else:
-            ls_plot = dash.no_update
-    elif action_selection == "train_model":
-        data_project = DataProject.from_dict(data_project_dict)
-        if len(target_height) > 0:
-            target_width = int(target_width[0])
-            target_height = int(target_height[0])
-            ls_var = int(ls_var[0])
-        else:
-            target_width = 32
-            target_height = 32
-            ls_var = 32
-        if changed_id != "img-slider.value":
-            ls_plot = get_bottleneck(ls_var, target_width, target_height)
-        else:
-            ls_plot = dash.no_update
+
     else:
-        target_height, target_width = 32, 32
+        if action_selection != "train_model":
+            return [32, 32], get_bottleneck(1, 1, 1, False)
+
+        target_width = target_width[0] if len(target_width) > 0 else 32
+        target_height = target_height[0] if len(target_height) > 0 else 32
+        ls_var = ls_var[0] if len(ls_var) > 0 else 32
+
+    # Generate bottleneck plot
+    ls_plot = get_bottleneck(ls_var, target_width, target_height)
+    return [target_width, target_height], ls_plot
+
+
+@callback(
+    Output("img-slider", "max", allow_duplicate=True),
+    Output("img-slider", "value", allow_duplicate=True),
+    Input("jobs-table", "selected_rows"),
+    Input("jobs-table", "data"),
+    State("img-slider", "value"),
+    prevent_initial_call=True,
+)
+def update_slider_boundaries_prediction(
+    row,
+    data_table,
+    slider_ind,
+):
+    """
+    This callback updates the slider boundaries according to the selected job type
+    Args:
+        row:                Selected row (job)
+        data_table:         Lists of jobs
+        slider_ind:         Slider index
+    Returns:
+        img-slider:         Maximum value of the slider
+        img-slider:         Slider index
+    """
+    # Get selected job type
+    if row and len(row) > 0:
+        selected_job_type = data_table[row[0]]["job_type"]
+    else:
+        selected_job_type = None
+
+    # If selected job type is train_model or tune_model
+    if selected_job_type == "prediction_model":
+        job_id = data_table[row[0]]["experiment_id"]
+        data_path = pathlib.Path("data/mlex_store/{}/{}".format(USER, job_id))
+
+        with open(f"{data_path}/.file_manager_vars.pkl", "rb") as file:
+            data_project_dict = pickle.load(file)
         data_project = DataProject.from_dict(data_project_dict)
-        if changed_id != "img-slider.value":
-            ls_plot = get_bottleneck(1, 1, 1, False)
-        else:
-            ls_plot = dash.no_update
+
+        # Check if slider index is out of bounds
+        if (
+            len(data_project.datasets) > 0
+            and slider_ind > data_project.datasets[-1].cumulative_data_count - 1
+        ):
+            slider_ind = 0
+
+        return data_project.datasets[-1].cumulative_data_count - 1, slider_ind
+
+    else:
+        raise PreventUpdate
+
+
+@callback(
+    Output("img-slider", "max"),
+    Output("img-slider", "value"),
+    Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
+    Input("jobs-table", "selected_rows"),
+    State("img-slider", "value"),
+    prevent_initial_call=True,
+)
+def update_slider_boundaries_new_dataset(
+    data_project_dict,
+    row,
+    slider_ind,
+):
+    """
+    This callback updates the slider boundaries according to the selected job type
+    Args:
+        data_project_dict:  Data project dictionary
+        row:                Selected row (job)
+        slider_ind:         Slider index
+    Returns:
+        img-slider:         Maximum value of the slider
+        img-slider:         Slider index
+    """
+    data_project = DataProject.from_dict(data_project_dict)
+    if len(data_project.datasets) > 0:
+        max_ind = data_project.datasets[-1].cumulative_data_count - 1
+    else:
+        max_ind = 0
+
+    slider_ind = min(slider_ind, max_ind)
+    return max_ind, slider_ind
+
+
+@callback(
+    Output("orig_img", "src"),
+    Output("data-size-out", "children"),
+    Input("img-slider", "value"),
+    Input("current-target-size", "data"),
+    State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
+    # Input({"base_id": "file-manager", "name": "log-toggle"}, "on"),
+    State("jobs-table", "selected_rows"),
+    State("jobs-table", "data"),
+)
+def refresh_image(
+    img_ind,
+    target_size,
+    data_project_dict,
+    # log,
+    row,
+    data_table,
+):
+    """
+    This callback refreshes the original image according to the selected job type
+    Args:
+        img_ind:            Image index
+        target_size:        Target size
+        data_project_dict:  Data project dictionary
+        log:                Log toggle
+        row:                Selected row (job)
+        data_table:         Lists of jobs
+    Returns:
+        orig_img:           Original image
+        data_size:          Data size
+    """
+    # Get selected job type
+    if row and len(row) > 0:
+        selected_job_type = data_table[row[0]]["job_type"]
+    else:
+        selected_job_type = None
+
+    if selected_job_type == "prediction_model":
+        job_id = data_table[row[0]]["experiment_id"]
+        data_path = pathlib.Path("data/mlex_store/{}/{}".format(USER, job_id))
+
+        with open(f"{data_path}/.file_manager_vars.pkl", "rb") as file:
+            data_project_dict = pickle.load(file)
+
+    data_project = DataProject.from_dict(data_project_dict)
     if (
         len(data_project.datasets) > 0
         and data_project.datasets[-1].cumulative_data_count > 0
     ):
-        slider_max = data_project.datasets[-1].cumulative_data_count - 1
-        if img_ind > slider_max:
-            img_ind = 0
         origimg, _ = data_project.read_datasets(
-            indices=[img_ind], export="pillow", resize=False, log=log
-        )
+            indices=[img_ind], export="pillow", resize=False
+        )  # , log=log)
         origimg = origimg[0]
     else:
         origimg = Image.fromarray((np.zeros((32, 32)).astype(np.uint8)))
-        slider_max = 0
     (width, height) = origimg.size
-    if "reconst_img" not in locals():
-        reconst_img = Image.fromarray((np.zeros(origimg.size).astype(np.uint8)))
-    elif origimg.mode == "L":
-        reconst_img = reconst_img.convert("L")
-    origimg = plot_figure(origimg.resize((target_width, target_height)))
-    recimg = plot_figure(reconst_img.resize((target_width, target_height)))
-    data_size = f"Original Image: ({width}x{height}). Resized Image: ({target_width}x{target_height})."
-    return origimg, recimg, ls_plot, slider_max, img_ind, data_size
+    origimg = plot_figure(origimg.resize((target_size[0], target_size[1])))
+    data_size = f"Original Image: ({width}x{height}). Resized Image: ({target_size[0]}x{target_size[1]})."
+    return origimg, data_size
+
+
+@callback(
+    Output("rec_img", "src"),
+    Input("img-slider", "value"),
+    Input("jobs-table", "selected_rows"),
+    Input("jobs-table", "data"),
+    # Input({"base_id": "file-manager", "name": "log-toggle"}, "on"),
+    Input("current-target-size", "data"),
+)
+def refresh_reconstruction(
+    img_ind,
+    row,
+    data_table,
+    # log,
+    target_size,
+):
+    """
+    This callback refreshes the reconstructed image according to the selected job type
+    Args:
+        img_ind:            Image index
+        row:                Selected row (job)
+        data_table:         Lists of jobs
+        log:                Log toggle
+        target_size:        Target size
+    Returns:
+        rec_img:            Reconstructed image
+    """
+    # Get selected job type
+    if row and len(row) > 0:
+        selected_job_type = data_table[row[0]]["job_type"]
+    else:
+        selected_job_type = None
+
+    if selected_job_type == "prediction_model":
+        job_id = data_table[row[0]]["experiment_id"]
+        reconstructed_path = "data/mlex_store/{}/{}/".format(USER, job_id)
+        if os.path.exists(f"{reconstructed_path}reconstructed_{img_ind}.jpg"):
+            reconst_img = Image.open(f"{reconstructed_path}reconstructed_{img_ind}.jpg")
+        else:
+            reconst_img = Image.fromarray(
+                (np.zeros((target_size[1], target_size[0])).astype(np.uint8))
+            )
+
+    else:
+        reconst_img = Image.fromarray(
+            (np.zeros((target_size[1], target_size[0])).astype(np.uint8))
+        )
+
+    return plot_figure(reconst_img)
 
 
 @callback(
     Output("warning-modal", "is_open"),
     Output("warning-msg", "children"),
     Input("warning-cause", "data"),
-    Input("ok-button", "n_clicks"),
     State("warning-modal", "is_open"),
     prevent_initial_call=True,
 )
-def toggle_warning_modal(warning_cause, ok_n_clicks, is_open):
+def open_warning_modal(warning_cause, is_open):
     """
     This callback toggles a warning/error message
     Args:
         warning_cause:      Cause that triggered the warning
-        ok_n_clicks:        Close the warning
         is_open:            Close/open state of the warning
     Returns:
         is_open:            Close/open state of the warning
          warning_msg:       Warning message
     """
-    changed_id = dash.callback_context.triggered[0]["prop_id"]
-    if "ok-button.n_clicks" in changed_id:
-        return not is_open, ""
     if warning_cause == "wrong_dataset":
         return not is_open, "The dataset you have selected is not supported."
-    if warning_cause == "no_row_selected":
+    elif warning_cause == "no_row_selected":
         return not is_open, "Please select a trained model from the List of Jobs"
-    if warning_cause == "no_dataset":
+    elif warning_cause == "no_dataset":
         return not is_open, "Please upload the dataset before submitting the job."
-    if warning_cause == "data_project_not_ready":
+    elif warning_cause == "data_project_not_ready":
         return (
             not is_open,
-            "The data project is still being created. Please try again \
-                             in a couple minutes.",
+            "The data project is still being created. Please try again in a couple minutes.",
         )
     else:
         return False, ""
+
+
+@callback(
+    Output("warning-modal", "is_open", allow_duplicate=True),
+    Input("ok-button", "n_clicks"),
+    prevent_initial_call=True,
+)
+def close_warning_modal(ok_n_clicks):
+    """
+    This callback closes warning/error message
+    Args:
+        ok_n_clicks:        Close the warning
+    Returns:
+        is_open:            Close/open state of the warning
+    """
+    return False

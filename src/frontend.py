@@ -1,6 +1,7 @@
 import json
 import os
 import pathlib
+import pickle
 import shutil
 from uuid import uuid4
 
@@ -8,9 +9,17 @@ from dash import Input, Output, State, dcc
 from file_manager.data_project import DataProject
 
 from app_layout import USER, app, long_callback_manager
-from callbacks.display import refresh_image, toggle_warning_modal  # noqa: F401
+from callbacks.display import (  # noqa: F401
+    close_warning_modal,
+    open_warning_modal,
+    refresh_bottleneck,
+    refresh_image,
+    refresh_reconstruction,
+    update_slider_boundaries_new_dataset,
+    update_slider_boundaries_prediction,
+)
 from callbacks.download import disable_download, toggle_storage_modal  # noqa: F401
-from callbacks.execute import execute  # noqa: F401
+from callbacks.execute import close_resources_popup, execute  # noqa: F401
 from callbacks.table import delete_row, update_table  # noqa: F401
 from dash_component_editor import JSONParameterEditor
 from utils.data_utils import get_input_params, prepare_directories
@@ -166,6 +175,15 @@ def submit_ml_job(
 
         # Define command to run
         command = f"{prediction_cmd} -d {data_info} -m {model_path} -o {out_path}"
+
+        # Save data project dict
+        data_project_dict = data_project.to_dict()
+
+        with open(f"{out_path}/.file_manager_vars.pkl", "wb") as file:
+            pickle.dump(
+                data_project_dict,
+                file,
+            )
 
     job = MlexJob(
         service_type="backend",

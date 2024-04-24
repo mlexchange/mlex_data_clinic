@@ -37,10 +37,12 @@ def prepare_directories(user_id, data_project, train=True):
     else:
         # Save filenames
         uri_list = []
-        for dataset in data_project.dataset:
-            uri_list.extend([dataset.uri + filename for filename in dataset.filenames])
+        for dataset in data_project.datasets:
+            uri_list.extend(
+                [dataset.uri + "/" + filename for filename in dataset.filenames]
+            )
         data_info = pd.DataFrame(
-            {"uri": [data_project.root_uri + uri for uri in uri_list]}
+            {"uri": [data_project.root_uri + "/" + uri for uri in uri_list]}
         )
     data_info["type"] = data_type
     data_info.to_parquet(f"{out_path}/data_info.parquet", engine="pyarrow")
