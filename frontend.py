@@ -7,6 +7,7 @@ import tempfile
 from uuid import uuid4
 
 from dash import ClientsideFunction, Input, Output, State, dcc
+from dash_component_editor import JSONParameterEditor
 from file_manager.data_project import DataProject
 
 from src.app_layout import DATA_DIR, USER, app, long_callback_manager
@@ -22,7 +23,6 @@ from src.callbacks.display import (  # noqa: F401
 from src.callbacks.download import disable_download, toggle_storage_modal  # noqa: F401
 from src.callbacks.execute import close_resources_popup, execute  # noqa: F401
 from src.callbacks.table import delete_row, update_table  # noqa: F401
-from src.dash_component_editor import JSONParameterEditor
 from src.utils.data_utils import get_input_params, prepare_directories
 from src.utils.job_utils import MlexJob, str_to_dict
 from src.utils.model_utils import get_gui_components, get_model_content
@@ -106,7 +106,7 @@ def save_results(download, job_data, row):
     State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State("model-name", "value"),
     State("model-selection", "value"),
-    State({"base_id": "file-manager", "name": "log-toggle"}, "on"),
+    State("log-transform", "on"),
     running=[(Output("job-alert", "is_open"), "True", "False")],
     manager=long_callback_manager,
     prevent_initial_call=True,
