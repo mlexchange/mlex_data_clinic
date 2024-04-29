@@ -1,3 +1,4 @@
+import logging
 import os
 
 import dash
@@ -5,16 +6,19 @@ import dash_bootstrap_components as dbc
 import diskcache
 from dash import dcc, html
 from dash.long_callback import DiskcacheLongCallbackManager
+from dotenv import load_dotenv
 from file_manager.main import FileManager
 
-from components.header import header
-from components.job_table import job_table
-from components.loss import loss_plot
-from components.main_display import main_display
-from components.resources_setup import resources_setup
-from components.sidebar import sidebar
-from utils.job_utils import get_host
-from utils.model_utils import get_model_list
+from src.components.header import header
+from src.components.job_table import job_table
+from src.components.loss import loss_plot
+from src.components.main_display import main_display
+from src.components.resources_setup import resources_setup
+from src.components.sidebar import sidebar
+from src.utils.job_utils import get_host
+from src.utils.model_utils import get_model_list
+
+load_dotenv(".env")
 
 USER = "admin"
 DATA_DIR = os.getenv("DATA_DIR", "data")
@@ -26,6 +30,10 @@ if TILED_KEY == "":
     TILED_KEY = None
 HOST_NICKNAME = os.getenv("HOST_NICKNAME")
 num_processors, num_gpus = get_host(HOST_NICKNAME)
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # SETUP DASH APP
 cache = diskcache.Cache("./cache")
@@ -47,6 +55,7 @@ dash_file_explorer = FileManager(
     DATA_DIR,
     open_explorer=False,
     api_key=TILED_KEY,
+    logger=logger,
 )
 dash_file_explorer.init_callbacks(app)
 

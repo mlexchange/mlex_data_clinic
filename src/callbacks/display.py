@@ -8,9 +8,9 @@ from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 from PIL import Image
 
-from app_layout import DATA_DIR, USER
-from utils.job_utils import str_to_dict
-from utils.plot_utils import get_bottleneck, plot_figure
+from src.app_layout import DATA_DIR, USER
+from src.utils.job_utils import str_to_dict
+from src.utils.plot_utils import get_bottleneck, plot_figure
 
 
 @callback(
@@ -173,12 +173,11 @@ def update_slider_boundaries_new_dataset(
 
 
 @callback(
-    Output("orig_img", "src"),
+    Output("orig_img_store", "data"),
     Output("data-size-out", "children"),
     Input("img-slider", "value"),
     Input("current-target-size", "data"),
     State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
-    # Input({"base_id": "file-manager", "name": "log-toggle"}, "on"),
     State("jobs-table", "selected_rows"),
     State("jobs-table", "data"),
 )
@@ -186,7 +185,6 @@ def refresh_image(
     img_ind,
     target_size,
     data_project_dict,
-    # log,
     row,
     data_table,
 ):
@@ -196,7 +194,6 @@ def refresh_image(
         img_ind:            Image index
         target_size:        Target size
         data_project_dict:  Data project dictionary
-        log:                Log toggle
         row:                Selected row (job)
         data_table:         Lists of jobs
     Returns:
@@ -223,7 +220,7 @@ def refresh_image(
     ):
         origimg, _ = data_project.read_datasets(
             indices=[img_ind], export="pillow", resize=False
-        )  # , log=log)
+        )
         origimg = origimg[0]
     else:
         origimg = Image.fromarray((np.zeros((32, 32)).astype(np.uint8)))

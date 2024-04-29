@@ -4,9 +4,9 @@ import dash
 import plotly.graph_objects as go
 from dash import Input, Output, State, callback, dcc
 
-from app_layout import DATA_DIR, USER
-from utils.job_utils import TableJob
-from utils.plot_utils import generate_loss_plot
+from src.app_layout import DATA_DIR, USER
+from src.utils.job_utils import TableJob
+from src.utils.plot_utils import generate_loss_plot
 
 
 @callback(

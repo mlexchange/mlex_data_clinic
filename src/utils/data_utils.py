@@ -3,7 +3,7 @@ import uuid
 
 import pandas as pd
 
-from app_layout import DATA_DIR, TILED_KEY
+from src.app_layout import DATA_DIR, TILED_KEY
 
 
 def prepare_directories(user_id, data_project, train=True):
