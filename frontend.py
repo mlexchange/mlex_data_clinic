@@ -27,6 +27,8 @@ from src.utils.data_utils import get_input_params, prepare_directories
 from src.utils.job_utils import MlexJob, str_to_dict
 from src.utils.model_utils import get_gui_components, get_model_content
 
+APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
+APP_PORT = os.getenv("APP_PORT", "8053")
 DIR_MOUNT = os.getenv("DIR_MOUNT", "/data")
 
 
@@ -219,4 +221,4 @@ def submit_ml_job(
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True, host="0.0.0.0", port="8053")
+    app.run_server(debug=True, host=APP_HOST, port=APP_PORT)
