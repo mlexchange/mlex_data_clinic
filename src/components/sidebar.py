@@ -1,4 +1,5 @@
 import dash_bootstrap_components as dbc
+import dash_daq as daq
 from dash import dcc
 
 
@@ -16,6 +17,16 @@ def sidebar(file_explorer, models):
                 dbc.AccordionItem(
                     title="Data selection",
                     children=file_explorer,
+                ),
+                dbc.AccordionItem(
+                    title="Data transformation",
+                    children=[
+                        dbc.Label("Log-transform"),
+                        daq.BooleanSwitch(
+                            id="log-transform",
+                            on=False,
+                        ),
+                    ],
                 ),
                 dbc.AccordionItem(
                     title="Model configuration",

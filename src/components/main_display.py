@@ -31,6 +31,10 @@ def main_display(loss_plot, job_table):
                                                 "display": "inline-block",
                                             },
                                         ),
+                                        dcc.Store(
+                                            id="orig_img_store",
+                                            data=None,
+                                        ),
                                         html.Img(
                                             id="ls_graph",
                                             title="",
