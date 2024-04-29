@@ -1,10 +1,11 @@
 import os
+import traceback
 
 import dash
 import plotly.graph_objects as go
 from dash import Input, Output, State, callback, dcc
 
-from src.app_layout import DATA_DIR, USER
+from src.app_layout import DATA_DIR, USER, logger
 from src.utils.job_utils import TableJob
 from src.utils.plot_utils import generate_loss_plot
 
@@ -51,8 +52,8 @@ def update_table(n, row, current_job_table, current_fig):
         try:
             if current_fig["data"][0]["x"] == list(fig["data"][0]["x"]):
                 fig = dash.no_update
-        except Exception as e:
-            print(e)
+        except Exception:
+            logger.error(traceback.format_exc())
     if data_table == current_job_table:
         data_table = dash.no_update
     return data_table, fig, show_plot
