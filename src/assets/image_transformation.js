@@ -30,13 +30,33 @@ window.dash_clientside.clientside.transform_image = function(logToggle, data) {
             ctx.drawImage(image, 0, 0, image.width, image.height);
             var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             var data = imageData.data;
+            var floatData = new Float32Array(data.length);
 
             // Apply log(1+x) transformation to each pixel
+            var min = Infinity;
+            var max = -Infinity;
             for (var i = 0; i < data.length; i += 4) {
-                data[i] = (255 / Math.log(256)) * Math.log1p(data[i]);       // Red
-                data[i + 1] = (255 / Math.log(256)) * Math.log1p(data[i + 1]); // Green
-                data[i + 2] = (255 / Math.log(256)) * Math.log1p(data[i + 2]); // Blue
+                floatData[i] = Math.log1p(data[i]);       // Red
+                floatData[i + 1] = Math.log1p(data[i + 1]); // Green
+                floatData[i + 2] = Math.log1p(data[i + 2]); // Blue
                 // Alpha channel remains unchanged
+
+                // Update min and max
+                min = Math.min(min, floatData[i], floatData[i + 1], floatData[i + 2]);
+                max = Math.max(max, floatData[i], floatData[i + 1], floatData[i + 2]);
+            }
+
+            // Apply min-max normalization and scale to 0-255
+            for (var i = 0; i < floatData.length; i += 4) {
+                floatData[i] = (floatData[i] - min) / (max - min) * 255;       // Red
+                floatData[i + 1] = (floatData[i + 1] - min) / (max - min) * 255; // Green
+                floatData[i + 2] = (floatData[i + 2] - min) / (max - min) * 255; // Blue
+                floatData[i + 3] = data[i + 3]; // Alpha channel remains unchanged
+            }
+
+            // Convert floatData back to Uint8ClampedArray for imageData
+            for (var i = 0; i < data.length; i++) {
+                data[i] = Math.round(floatData[i]);
             }
 
             ctx.putImageData(imageData, 0, 0);
