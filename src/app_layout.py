@@ -24,7 +24,7 @@ USER = "admin"
 DATA_DIR = os.getenv("DATA_DIR", "data")
 SPLASH_URL = os.getenv("SPLASH_URL")
 DEFAULT_TILED_URI = os.getenv("DEFAULT_TILED_URI")
-DEFAULT_TILED_QUERY = os.getenv("DEFAULT_TILED_QUERY")
+DEFAULT_TILED_SUB_URI = os.getenv("DEFAULT_TILED_SUB_URI")
 TILED_KEY = os.getenv("TILED_KEY")
 if TILED_KEY == "":
     TILED_KEY = None
