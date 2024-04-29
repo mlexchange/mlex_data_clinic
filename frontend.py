@@ -28,7 +28,7 @@ from src.utils.job_utils import MlexJob, str_to_dict
 from src.utils.model_utils import get_gui_components, get_model_content
 
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
-APP_PORT = os.getenv("APP_PORT", "8053")
+APP_PORT = os.getenv("APP_PORT", "8072")
 DIR_MOUNT = os.getenv("DIR_MOUNT", "/data")
 
 
