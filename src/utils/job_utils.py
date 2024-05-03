@@ -1,8 +1,10 @@
 import json
 import os
 import urllib
-
+from dotenv import load_dotenv
 import requests
+
+load_dotenv(".env")
 
 COMPUTE_URL = str(os.environ["MLEX_COMPUTE_URL"])
 

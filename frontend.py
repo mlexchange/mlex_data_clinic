@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from dash import ClientsideFunction, Input, Output, State, dcc
 from dash_component_editor import JSONParameterEditor
+from dotenv import load_dotenv
 from file_manager.data_project import DataProject
 
 from src.app_layout import DATA_DIR, USER, app, long_callback_manager
@@ -27,9 +28,11 @@ from src.utils.data_utils import get_input_params, prepare_directories
 from src.utils.job_utils import MlexJob, str_to_dict
 from src.utils.model_utils import get_gui_components, get_model_content
 
+load_dotenv(".env")
+
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
 APP_PORT = os.getenv("APP_PORT", "8072")
-DIR_MOUNT = os.getenv("DIR_MOUNT", "/data")
+DIR_MOUNT = os.getenv("DIR_MOUNT", DATA_DIR)
 
 
 app.clientside_callback(
@@ -146,19 +149,30 @@ def submit_ml_job(
     """
     data_project = DataProject.from_dict(data_project_dict)
     model_uri, [train_cmd, prediction_cmd, tune_cmd] = get_model_content(model_id)
-    experiment_id, out_path, data_info = prepare_directories(
-        USER, data_project, train=(action_selection != "prediction_model")
+    experiment_id, orig_out_path, data_info = prepare_directories(
+        USER,
+        data_project,
+        train=(action_selection != "prediction_model"),
+        correct_path=(DATA_DIR==DIR_MOUNT)
     )
     input_params = get_input_params(children)
     input_params["log"] = log
     kwargs = {}
+
+    # Find the relative data directory in docker container
+    if DIR_MOUNT == DATA_DIR:
+        relative_data_dir = "/app/work/data"
+        out_path = "/app/work/data"+str(orig_out_path).split(DATA_DIR, 1)[-1]
+        data_info = "/app/work/data"+str(data_info).split(DATA_DIR, 1)[-1]
+    else:
+        relative_data_dir = DATA_DIR
 
     if action_selection == "train_model":
         command = f"{train_cmd} -d {data_info} -o {out_path}"
 
     elif action_selection == "tune_model":
         training_exp_id = job_data[row[0]]["experiment_id"]
-        model_path = pathlib.Path(f"{DATA_DIR}/mlex_store/{USER}/{training_exp_id}")
+        model_path = pathlib.Path(f"{relative_data_dir}/mlex_store/{USER}/{training_exp_id}")
         kwargs = {"train_params": job_data[row[0]]["parameters"]}
         train_params = str_to_dict(job_data[row[0]]["parameters"])
 
@@ -171,7 +185,7 @@ def submit_ml_job(
 
     else:
         training_exp_id = job_data[row[0]]["experiment_id"]
-        model_path = pathlib.Path(f"{DATA_DIR}/mlex_store/{USER}/{training_exp_id}")
+        model_path = pathlib.Path(f"{relative_data_dir}/mlex_store/{USER}/{training_exp_id}")
         if job_data[row[0]]["job_type"] == "train_model":
             train_params = job_data[row[0]]["parameters"]
         else:
@@ -192,7 +206,8 @@ def submit_ml_job(
         # Save data project dict
         data_project_dict = data_project.to_dict()
 
-        with open(f"{out_path}/.file_manager_vars.pkl", "wb") as file:
+
+        with open(f"{orig_out_path}/.file_manager_vars.pkl", "wb") as file:
             pickle.dump(
                 data_project_dict,
                 file,
