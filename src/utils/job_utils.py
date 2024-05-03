@@ -1,8 +1,9 @@
 import json
 import os
 import urllib
-from dotenv import load_dotenv
+
 import requests
+from dotenv import load_dotenv
 
 load_dotenv(".env")
 
