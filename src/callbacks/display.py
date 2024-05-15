@@ -162,14 +162,17 @@ def update_slider_boundaries_new_dataset(
         img-slider:         Maximum value of the slider
         img-slider:         Slider index
     """
-    data_project = DataProject.from_dict(data_project_dict)
-    if len(data_project.datasets) > 0:
-        max_ind = data_project.datasets[-1].cumulative_data_count - 1
-    else:
-        max_ind = 0
+    if data_project_dict != {}:
+        data_project = DataProject.from_dict(data_project_dict)
+        if len(data_project.datasets) > 0:
+            max_ind = data_project.datasets[-1].cumulative_data_count - 1
+        else:
+            max_ind = 0
 
-    slider_ind = min(slider_ind, max_ind)
-    return max_ind, slider_ind
+        slider_ind = min(slider_ind, max_ind)
+        return max_ind, slider_ind
+    else:
+        raise PreventUpdate
 
 
 @callback(
@@ -216,23 +219,24 @@ def refresh_image(
         with open(f"{data_path}/.file_manager_vars.pkl", "rb") as file:
             data_project_dict = pickle.load(file)
 
-    data_project = DataProject.from_dict(data_project_dict)
-    if (
-        len(data_project.datasets) > 0
-        and data_project.datasets[-1].cumulative_data_count > 0
-    ):
-        origimg, _ = data_project.read_datasets(
-            indices=[img_ind], export="pillow", resize=False, log=log_transform
-        )
-        origimg = origimg[0]
-        print(origimg.size, flush=True)
+    if data_project_dict != {}:
+        data_project = DataProject.from_dict(data_project_dict)
+        if (
+            len(data_project.datasets) > 0
+            and data_project.datasets[-1].cumulative_data_count > 0
+        ):
+            origimg, _ = data_project.read_datasets(
+                indices=[img_ind], export="pillow", resize=False, log=log_transform
+            )
+            origimg = origimg[0]
+        else:
+            origimg = Image.fromarray((np.zeros((32, 32)).astype(np.uint8)))
+        (width, height) = origimg.size
+        origimg = plot_figure(origimg.resize((target_size[0], target_size[1])))
+        data_size = f"Original Image: ({width}x{height}). Resized Image: ({target_size[0]}x{target_size[1]})."
+        return origimg, data_size
     else:
-        origimg = Image.fromarray((np.zeros((32, 32)).astype(np.uint8)))
-        print("Dummy image", flush=True)
-    (width, height) = origimg.size
-    origimg = plot_figure(origimg.resize((target_size[0], target_size[1])))
-    data_size = f"Original Image: ({width}x{height}). Resized Image: ({target_size[0]}x{target_size[1]})."
-    return origimg, data_size
+        raise PreventUpdate
 
 
 @callback(
