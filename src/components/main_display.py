@@ -21,15 +21,22 @@ def main_display(loss_plot, job_table):
                             [
                                 dbc.Row(
                                     [
-                                        html.Img(
-                                            id="orig_img",
-                                            title="Input Image",
-                                            style={
-                                                "width": "15vw",
-                                                "height": "200px",
-                                                "padding": "0px",
-                                                "display": "inline-block",
-                                            },
+                                        dcc.Loading(
+                                            id="loading-original",
+                                            parent_className="transparent-loader-wrapper",
+                                            children=[
+                                                html.Img(
+                                                    id="orig_img",
+                                                    title="Input Image",
+                                                    style={
+                                                        "width": "15vw",
+                                                        "height": "200px",
+                                                        "padding": "0px",
+                                                        "display": "inline-block",
+                                                    },
+                                                )
+                                            ],
+                                            type="circle",
                                         ),
                                         html.Img(
                                             id="ls_graph",
@@ -41,14 +48,23 @@ def main_display(loss_plot, job_table):
                                                 "display": "inline-block",
                                             },
                                         ),
-                                        html.Img(
-                                            id="rec_img",
-                                            title="Reconstructed Image",
+                                        dcc.Loading(
+                                            id="loading-recons",
+                                            parent_className="transparent-loader-wrapper",
+                                            children=html.Img(
+                                                id="rec_img",
+                                                title="Reconstructed Image",
+                                                style={
+                                                    "width": "15vw",
+                                                    "height": "200px",
+                                                    "padding": "0px",
+                                                    "display": "inline-block",
+                                                },
+                                            ),
+                                            type="circle",
                                             style={
                                                 "width": "15vw",
-                                                "height": "200px",
-                                                "padding": "0px",
-                                                "display": "inline-block",
+                                                "padding-right": "0px",
                                             },
                                         ),
                                     ],

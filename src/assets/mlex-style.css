@@ -14,8 +14,10 @@ label {
   margin-bottom: 0;
 }
 
-#transparent-loader-wrapper > div {
+.transparent-loader-wrapper{
     visibility: visible !important;
+    width: 15vw !important;
+    padding: 0 !important;
 }
 
 .all {
