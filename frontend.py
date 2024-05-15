@@ -6,7 +6,7 @@ import shutil
 import tempfile
 from uuid import uuid4
 
-from dash import ClientsideFunction, Input, Output, State, dcc
+from dash import Input, Output, State, dcc
 from dash_component_editor import JSONParameterEditor
 from dotenv import load_dotenv
 from file_manager.data_project import DataProject
@@ -33,15 +33,6 @@ load_dotenv(".env")
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
 APP_PORT = os.getenv("APP_PORT", "8072")
 DIR_MOUNT = os.getenv("DIR_MOUNT", DATA_DIR)
-
-
-app.clientside_callback(
-    ClientsideFunction(namespace="clientside", function_name="transform_image"),
-    Output("orig_img", "src"),
-    Input("log-transform", "on"),
-    Input("orig_img_store", "data"),
-    prevent_initial_call=True,
-)
 
 
 @app.callback(

@@ -173,10 +173,11 @@ def update_slider_boundaries_new_dataset(
 
 
 @callback(
-    Output("orig_img_store", "data"),
+    Output("orig_img", "src"),
     Output("data-size-out", "children"),
     Input("img-slider", "value"),
     Input("current-target-size", "data"),
+    Input("log-transform", "on"),
     State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State("jobs-table", "selected_rows"),
     State("jobs-table", "data"),
@@ -184,6 +185,7 @@ def update_slider_boundaries_new_dataset(
 def refresh_image(
     img_ind,
     target_size,
+    log_transform,
     data_project_dict,
     row,
     data_table,
@@ -193,6 +195,7 @@ def refresh_image(
     Args:
         img_ind:            Image index
         target_size:        Target size
+        log_transform:      Log transform
         data_project_dict:  Data project dictionary
         row:                Selected row (job)
         data_table:         Lists of jobs
@@ -219,11 +222,13 @@ def refresh_image(
         and data_project.datasets[-1].cumulative_data_count > 0
     ):
         origimg, _ = data_project.read_datasets(
-            indices=[img_ind], export="pillow", resize=False
+            indices=[img_ind], export="pillow", resize=False, log=log_transform
         )
         origimg = origimg[0]
+        print(origimg.size, flush=True)
     else:
         origimg = Image.fromarray((np.zeros((32, 32)).astype(np.uint8)))
+        print("Dummy image", flush=True)
     (width, height) = origimg.size
     origimg = plot_figure(origimg.resize((target_size[0], target_size[1])))
     data_size = f"Original Image: ({width}x{height}). Resized Image: ({target_size[0]}x{target_size[1]})."
@@ -235,14 +240,12 @@ def refresh_image(
     Input("img-slider", "value"),
     Input("jobs-table", "selected_rows"),
     Input("jobs-table", "data"),
-    # Input({"base_id": "file-manager", "name": "log-toggle"}, "on"),
     Input("current-target-size", "data"),
 )
 def refresh_reconstruction(
     img_ind,
     row,
     data_table,
-    # log,
     target_size,
 ):
     """
@@ -251,7 +254,6 @@ def refresh_reconstruction(
         img_ind:            Image index
         row:                Selected row (job)
         data_table:         Lists of jobs
-        log:                Log toggle
         target_size:        Target size
     Returns:
         rec_img:            Reconstructed image
