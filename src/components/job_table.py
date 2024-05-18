@@ -8,17 +8,37 @@ def job_table():
             dbc.CardHeader("List of Jobs"),
             dbc.CardBody(
                 children=[
-                    dbc.Alert(
+                    dbc.Toast(
                         "Your ML job is being prepared, it will be shown in the table shortly.",
                         id="job-alert",
                         dismissable=True,
                         is_open=False,
+                        header="Job Notification",
+                        icon="info",
+                        style={
+                            "position": "fixed",
+                            "top": "85%",
+                            "right": "1%",
+                            "width": 350,
+                            "z-index": "1050",
+                        },
+                        duration=5000,
                     ),
-                    dbc.Alert(
+                    dbc.Toast(
                         "Your ML job has been succesfully submitted.",
                         id="job-alert-confirm",
                         dismissable=True,
                         is_open=False,
+                        header="Job Notification",
+                        icon="success",
+                        style={
+                            "position": "fixed",
+                            "top": "75%",
+                            "right": "1%",
+                            "width": 350,
+                            "z-index": "1050",
+                        },
+                        duration=5000,
                     ),
                     dbc.Row(
                         [
