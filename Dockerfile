@@ -11,6 +11,7 @@ WORKDIR /app/work
 ENV HOME /app/work
 COPY src src
 COPY frontend.py frontend.py
+COPY gunicorn_config.py gunicorn_config.py
 
 CMD ["bash"]
-CMD python3 frontend.py
+CMD gunicorn -c gunicorn_config.py --reload frontend:server

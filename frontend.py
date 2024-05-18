@@ -34,6 +34,8 @@ APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
 APP_PORT = os.getenv("APP_PORT", "8072")
 DIR_MOUNT = os.getenv("DIR_MOUNT", DATA_DIR)
 
+server = app.server
+
 
 @app.callback(
     Output("app-parameters", "children"),
