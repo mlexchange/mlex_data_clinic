@@ -8,7 +8,7 @@ from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 from PIL import Image
 
-from src.app_layout import DATA_DIR, USER
+from src.app_layout import DATA_DIR, TILED_KEY, USER
 from src.utils.job_utils import str_to_dict
 from src.utils.plot_utils import get_bottleneck, plot_figure
 
@@ -124,7 +124,7 @@ def update_slider_boundaries_prediction(
 
         with open(f"{data_path}/.file_manager_vars.pkl", "rb") as file:
             data_project_dict = pickle.load(file)
-        data_project = DataProject.from_dict(data_project_dict)
+        data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
 
         # Check if slider index is out of bounds
         if (
@@ -163,7 +163,7 @@ def update_slider_boundaries_new_dataset(
         img-slider:         Slider index
     """
     if data_project_dict != {}:
-        data_project = DataProject.from_dict(data_project_dict)
+        data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
         if len(data_project.datasets) > 0:
             max_ind = data_project.datasets[-1].cumulative_data_count - 1
         else:
@@ -220,7 +220,7 @@ def refresh_image(
             data_project_dict = pickle.load(file)
 
     if data_project_dict != {}:
-        data_project = DataProject.from_dict(data_project_dict)
+        data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
         if (
             len(data_project.datasets) > 0
             and data_project.datasets[-1].cumulative_data_count > 0

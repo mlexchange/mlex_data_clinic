@@ -11,7 +11,7 @@ from dash_component_editor import JSONParameterEditor
 from dotenv import load_dotenv
 from file_manager.data_project import DataProject
 
-from src.app_layout import DATA_DIR, USER, app, long_callback_manager
+from src.app_layout import DATA_DIR, TILED_KEY, USER, app, long_callback_manager
 from src.callbacks.display import (  # noqa: F401
     close_warning_modal,
     open_warning_modal,
@@ -140,7 +140,7 @@ def submit_ml_job(
     Returns:
         open the alert indicating that the job was submitted
     """
-    data_project = DataProject.from_dict(data_project_dict)
+    data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
     model_uri, [train_cmd, prediction_cmd, tune_cmd] = get_model_content(model_id)
     experiment_id, orig_out_path, data_info = prepare_directories(
         USER,
