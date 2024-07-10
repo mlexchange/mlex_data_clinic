@@ -1,6 +1,7 @@
 import dash_bootstrap_components as dbc
-import dash_daq as daq
 from dash import dcc
+
+from src.utils.mask_utils import get_mask_options
 
 
 def sidebar(file_explorer, models):
@@ -21,10 +22,55 @@ def sidebar(file_explorer, models):
                 dbc.AccordionItem(
                     title="Data transformation",
                     children=[
-                        dbc.Label("Log-transform"),
-                        daq.BooleanSwitch(
-                            id="log-transform",
-                            on=False,
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    dbc.Label("Log Transform"), width=4, align="start"
+                                ),
+                                dbc.Col(
+                                    dbc.Switch(
+                                        id="log-transform",
+                                        value=False,
+                                        label_style={"display": "none"},
+                                        style={"height": "20px"},
+                                    ),
+                                    align="start",
+                                ),
+                            ],
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    dbc.Label("Min-Max Percentile"),
+                                    width=4,
+                                ),
+                                dbc.Col(
+                                    dcc.RangeSlider(
+                                        id="min-max-percentile",
+                                        min=0,
+                                        max=100,
+                                        tooltip={
+                                            "placement": "bottom",
+                                            "always_visible": True,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            style={"margin-bottom": "10px"},
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    dbc.Label("Mask Selection"),
+                                    width=4,
+                                ),
+                                dbc.Col(
+                                    dcc.Dropdown(
+                                        id="mask-dropdown",
+                                        options=get_mask_options(),
+                                    ),
+                                ),
+                            ]
                         ),
                     ],
                 ),

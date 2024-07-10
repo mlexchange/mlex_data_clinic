@@ -180,7 +180,8 @@ def update_slider_boundaries_new_dataset(
     Output("data-size-out", "children"),
     Input("img-slider", "value"),
     Input("current-target-size", "data"),
-    Input("log-transform", "on"),
+    Input("log-transform", "value"),
+    Input("min-max-percentile", "value"),
     State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State("jobs-table", "selected_rows"),
     State("jobs-table", "data"),
@@ -189,6 +190,7 @@ def refresh_image(
     img_ind,
     target_size,
     log_transform,
+    percentiles,
     data_project_dict,
     row,
     data_table,
@@ -199,6 +201,7 @@ def refresh_image(
         img_ind:            Image index
         target_size:        Target size
         log_transform:      Log transform
+        percentiles:        Percentiles
         data_project_dict:  Data project dictionary
         row:                Selected row (job)
         data_table:         Lists of jobs
@@ -225,8 +228,14 @@ def refresh_image(
             len(data_project.datasets) > 0
             and data_project.datasets[-1].cumulative_data_count > 0
         ):
+            if percentiles is None:
+                percentiles = [0, 100]
             origimg, _ = data_project.read_datasets(
-                indices=[img_ind], export="pillow", resize=False, log=log_transform
+                indices=[img_ind],
+                export="pillow",
+                resize=False,
+                log=log_transform,
+                percentiles=percentiles,
             )
             origimg = origimg[0]
         else:

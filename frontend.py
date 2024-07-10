@@ -104,7 +104,8 @@ def save_results(download, job_data, row):
     State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     State("model-name", "value"),
     State("model-selection", "value"),
-    State("log-transform", "on"),
+    State("log-transform", "value"),
+    State("min-max-percentile", "value"),
     running=[(Output("job-alert", "is_open"), "True", "False")],
     manager=long_callback_manager,
     prevent_initial_call=True,
@@ -121,6 +122,7 @@ def submit_ml_job(
     model_name,
     model_id,
     log,
+    percentiles,
 ):
     """
     This callback submits a job request to the compute service according to the selected action & model
@@ -137,6 +139,7 @@ def submit_ml_job(
         model_name:         Model name/description assigned by the user
         model_id:           UID of model in content registry
         log:                Log toggle
+        percentiles:        Min-Max Percentile values
     Returns:
         open the alert indicating that the job was submitted
     """
@@ -150,6 +153,7 @@ def submit_ml_job(
     )
     input_params = get_input_params(children)
     input_params["log"] = log
+    input_params["percentiles"] = percentiles
     kwargs = {}
 
     # Find the relative data directory in docker container
