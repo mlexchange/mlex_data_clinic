@@ -1,21 +1,30 @@
-version: "3"
+version: '3.7'
 
 services:
-  front-end:
+  data_clinic:
     restart: "unless-stopped"
     container_name: "data_clinic"
-    build:
-      context: "."
-      dockerfile: "docker/Dockerfile"
-    command: "python src/frontend.py"
-    environment:
-      DATA_DIR: "${PWD}/data"
+    image: ghcr.io/mlexchange/mlex_data_clinic:master
     volumes:
-      - ${PWD}:/app/work
+      - $DATA_DIR:/app/work/data
+    environment:
+      DIR_MOUNT: "${DATA_DIR}"
+      DATA_DIR: "/app/work/data"
+      MLEX_COMPUTE_URL: "${MLEX_COMPUTE_URL}"
+      MLEX_CONTENT_URL: "${MLEX_CONTENT_URL}"
+      HOST_NICKNAME: "${HOST_NICKNAME}"
+      TILED_KEY: "${TILED_KEY}"
+      DEFAULT_TILED_URI: "${DEFAULT_TILED_URI}"
+      DEFAULT_TILED_SUB_URI: "${DEFAULT_TILED_QUERY}"
+      APP_HOST: "0.0.0.0"
+      APP_PORT: "8050"
     ports:
-      - "8072:8072"
+      - 127.0.0.1:8072:8050
     networks:
       - computing_api_default
+
+  autoencoders:
+    image: ghcr.io/mlexchange/mlex_pytorch_autoencoders:main
 
 networks:
   computing_api_default:
