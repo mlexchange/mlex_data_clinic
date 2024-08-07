@@ -9,11 +9,14 @@ def get_model_list():
     """
     Get a list of algorithms from content registry
     """
-    response = requests.get(f"{CONTENT_URL}/models")
     models = []
-    for item in response.json():
-        if "data_clinic" in item["application"]:
-            models.append({"label": item["name"], "value": item["content_id"]})
+    response = requests.get(f"{CONTENT_URL}/models")
+    if response.status_code == 200:
+        for item in response.json():
+            if "data_clinic" in item["application"]:
+                models.append({"label": item["name"], "value": item["content_id"]})
+    else:
+        models.append({"label": "No models available", "value": ""})
     return models
 
 
