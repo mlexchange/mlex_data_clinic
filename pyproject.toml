@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+    packages = ["src/**/*"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[project]
+name = "data_clinic"
+version = "0.2.0"
+description = "Data Clinic"
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.11"
+
+dependencies = [
+    "dash==2.9.3",
+    "dash[diskcache]",
+    "dash_bootstrap_components==1.0.2",
+    "dash_daq==0.5.0",
+    "dash-extensions==0.0.71",
+    "flask==3.0.0",
+    "Flask-Caching",
+    "kaleido",
+    "dash_component_editor@git+https://github.com/mlexchange/mlex_dash_component_editor.git",
+    "mlex_file_manager@git+https://github.com/mlexchange/mlex_file_manager.git",
+    "numpy>=1.19.5",
+    "pandas",
+    "Pillow",
+    "plotly>=5.21.0",
+    "plotly-express",
+    "pyFAI==2023.9.0",
+    "python-dotenv",
+    "requests==2.26.0",
+    "diskcache==5.6.3"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black==24.2.0",
+    "flake8==7.0.0",
+    "isort==5.13.2",
+    "pre-commit==3.6.2",
+    "pytest==8.1.1",
+]

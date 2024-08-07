@@ -1,29 +1,28 @@
 version: '3.7'
 
-x-environment: &commonEnvironment
-    DATA_DIR: "${PWD}/data/"
-    PROJECT_ID: "-1"
-    SPLASH_URL: "http://splash:80/api/v0"
-    MLEX_COMPUTE_URL: "http://job-service:8080/api/v0"
-    MLEX_CONTENT_URL: "http://content-api:8000/api/v0" 
-    HOST_NICKNAME: "local"
-    TILED_KEY: "${TILED_KEY}"
-    DEFAULT_TILED_URI: "${DEFAULT_TILED_URI}"
-
 services:
   data_clinic:
     restart: "unless-stopped"
-    container_name: "data_clinic1"
-    image: ghcr.io/taxe10/mlex_data_clinic:master
-    environment:
-      *commonEnvironment
+    container_name: "data_clinic"
+    image: ghcr.io/mlexchange/mlex_data_clinic:master
     volumes:
-      - ${PWD}/data:/app/work/data
+      - $DATA_DIR:/app/work/data
+    environment:
+      DIR_MOUNT: "${DATA_DIR}"
+      DATA_DIR: "/app/work/data"
+      MLEX_COMPUTE_URL: "${MLEX_COMPUTE_URL}"
+      MLEX_CONTENT_URL: "${MLEX_CONTENT_URL}"
+      HOST_NICKNAME: "${HOST_NICKNAME}"
+      TILED_KEY: "${TILED_KEY}"
+      DEFAULT_TILED_URI: "${DEFAULT_TILED_URI}"
+      DEFAULT_TILED_SUB_URI: "${DEFAULT_TILED_QUERY}"
+      APP_HOST: "0.0.0.0"
+      APP_PORT: "8050"
     ports:
       - 127.0.0.1:8072:8050
     networks:
       - computing_api_default
-  
+
   autoencoders:
     image: ghcr.io/mlexchange/mlex_pytorch_autoencoders:main
 

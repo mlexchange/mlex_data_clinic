@@ -1,5 +1,9 @@
+# Docker override
+docker-compose.override.y*ml
+
 # Byte-compiled / optimized / DLL files
 **pycache**
+**cache**
 *.py[cod]
 *$py.class
 
