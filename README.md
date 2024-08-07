@@ -5,17 +5,23 @@ This app provides a training/testing platform for latent space exploration with
 unsupervised deep-learning approaches.
 
 ## Running as a standalone application
-First, let's install docker:
 
-* https://docs.docker.com/engine/install/
-
-Next, let's [install the MLExchange platform](https://github.com/mlexchange/mlex).
-
-Before moving to the next step, please make sure that the computing API and the content
-registry are up and running. For more information, please refer to their respective
+1. Start the compute and content services in the [MLExchange platform](https://github.com/mlexchange/mlex). Before moving to the next step, please make sure that the computing API and the content registry are up and running. For more information, please refer to their respective
 README files.
-* Next, cd into mlex_data_clinic
-* type `docker-compose up` into your terminal
+
+2. Create a new Python environment and install dependencies:
+```
+conda create -n new_env python==3.11
+conda activate new_env
+pip install .
+```
+
+3. Create a `.env` file using `.env.example` as reference. Update this file accordingly.
+
+4. Start example app:
+```
+python frontend.py
+```
 
 Finally, you can access Data CLinic at:
 * Dash app: http://localhost:8072/
