@@ -13,7 +13,6 @@ from mlex_utils.dash_utils.mlex_components import MLExComponents
 from src.components.header import header
 from src.components.loss import loss_plot
 from src.components.main_display import main_display
-from src.components.resources_setup import resources_setup
 from src.components.sidebar import sidebar
 from src.utils.model_utils import Models
 
@@ -28,7 +27,6 @@ TILED_KEY = os.getenv("TILED_KEY")
 if TILED_KEY == "":
     TILED_KEY = None
 MODELFILE_PATH = os.getenv("MODELFILE_PATH", "./examples/assets/models.json")
-num_processors, num_gpus = 1, 0
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -86,7 +84,6 @@ app.layout = html.Div(
                         html.Div(id="dummy-output"),
                     ]
                 ),
-                resources_setup(num_processors, num_gpus),
                 dcc.Store(id="current-target-size", data=[0, 0]),
             ],
             fluid=True,
