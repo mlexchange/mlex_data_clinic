@@ -29,7 +29,6 @@ from src.callbacks.display import (  # noqa: F401
 )
 from src.callbacks.download import disable_download, toggle_storage_modal  # noqa: F401
 from src.callbacks.execute import close_resources_popup, execute  # noqa: F401
-from src.callbacks.table import delete_row, update_table  # noqa: F401
 from src.utils.data_utils import get_input_params, prepare_directories
 
 load_dotenv(".env")

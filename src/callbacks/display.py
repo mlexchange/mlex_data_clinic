@@ -9,7 +9,6 @@ from file_manager.data_project import DataProject
 from PIL import Image
 
 from src.app_layout import DATA_DIR, TILED_KEY, USER
-from src.utils.job_utils import str_to_dict
 from src.utils.plot_utils import get_bottleneck, plot_figure
 
 
@@ -70,7 +69,7 @@ def refresh_bottleneck(
                 "Training Parameters:"
             )[-1]
 
-        train_params = str_to_dict(train_params)
+        train_params = {}
         ls_var = int(train_params["latent_dim"])
         target_width = int(train_params["target_width"])
         target_height = int(train_params["target_height"])
