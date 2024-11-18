@@ -101,6 +101,7 @@ def sidebar(file_explorer, job_manager, models):
                     title="Model Configuration",
                 ),
             ],
+            style={"overflow-y": "scroll", "height": "90vh"},
         ),
         dbc.Modal(
             [

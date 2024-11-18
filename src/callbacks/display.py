@@ -1,4 +1,3 @@
-import os
 import pathlib
 import pickle
 
@@ -24,22 +23,30 @@ from src.utils.plot_utils import get_bottleneck, plot_figure
         },
         "value",
     ),
-    Input({"type": ALL, "param_key": "target_width", "name": "target_width"}, "value"),
     Input(
-        {"type": ALL, "param_key": "target_height", "name": "target_height"}, "value"
+        {
+            "type": ALL,
+            "param_key": "target_width",
+            "name": "target_width",
+            "layer": "input",
+        },
+        "value",
     ),
-    Input("jobs-table", "selected_rows"),
-    Input("jobs-table", "data"),
-    State("action", "value"),
+    Input(
+        {
+            "type": ALL,
+            "param_key": "target_height",
+            "name": "target_height",
+            "layer": "input",
+        },
+        "value",
+    ),
     prevent_initial_call=True,
 )
 def refresh_bottleneck(
     ls_var,
     target_width,
     target_height,
-    row,
-    data_table,
-    action_selection,
 ):
     """
     This callback refreshes the bottleneck plot according to the selected job type
@@ -47,40 +54,13 @@ def refresh_bottleneck(
         ls_var:             Latent space value
         target_width:       Target width
         target_height:      Target height
-        row:                Selected row (job)
-        data_table:         Lists of jobs
-        action_selection:   Action selected
     Returns:
         current-target-size:    Target size
         ls_graph:               Bottleneck plot
     """
-    # Get selected job type
-    if row and len(row) > 0:
-        selected_job_type = data_table[row[0]]["job_type"]
-    else:
-        selected_job_type = None
-
-    # If selected job type is train_model or tune_model
-    if selected_job_type:
-        if selected_job_type == "train_model":
-            train_params = data_table[row[0]]["parameters"]
-        else:
-            train_params = data_table[row[0]]["parameters"].split(
-                "Training Parameters:"
-            )[-1]
-
-        train_params = {}
-        ls_var = int(train_params["latent_dim"])
-        target_width = int(train_params["target_width"])
-        target_height = int(train_params["target_height"])
-
-    else:
-        if action_selection != "train_model":
-            return [32, 32], get_bottleneck(1, 1, 1, False)
-
-        target_width = target_width[0] if len(target_width) > 0 else 32
-        target_height = target_height[0] if len(target_height) > 0 else 32
-        ls_var = ls_var[0] if len(ls_var) > 0 else 32
+    target_width = target_width[0] if len(target_width) > 0 else 32
+    target_height = target_height[0] if len(target_height) > 0 else 32
+    ls_var = ls_var[0] if len(ls_var) > 0 else 32
 
     # Generate bottleneck plot
     ls_plot = get_bottleneck(ls_var, target_width, target_height)
@@ -181,9 +161,7 @@ def update_slider_boundaries_new_dataset(
     Input("current-target-size", "data"),
     Input("log-transform", "value"),
     Input("min-max-percentile", "value"),
-    State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
-    State("jobs-table", "selected_rows"),
-    State("jobs-table", "data"),
+    Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
 )
 def refresh_image(
     img_ind,
@@ -191,8 +169,6 @@ def refresh_image(
     log_transform,
     percentiles,
     data_project_dict,
-    row,
-    data_table,
 ):
     """
     This callback refreshes the original image according to the selected job type
@@ -202,25 +178,10 @@ def refresh_image(
         log_transform:      Log transform
         percentiles:        Percentiles
         data_project_dict:  Data project dictionary
-        row:                Selected row (job)
-        data_table:         Lists of jobs
     Returns:
         orig_img:           Original image
         data_size:          Data size
     """
-    # Get selected job type
-    if row and len(row) > 0:
-        selected_job_type = data_table[row[0]]["job_type"]
-    else:
-        selected_job_type = None
-
-    if selected_job_type == "prediction_model":
-        job_id = data_table[row[0]]["experiment_id"]
-        data_path = pathlib.Path(f"{DATA_DIR}/mlex_store/{USER}/{job_id}")
-
-        with open(f"{data_path}/.file_manager_vars.pkl", "rb") as file:
-            data_project_dict = pickle.load(file)
-
     if data_project_dict != {}:
         data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
         if (
@@ -250,48 +211,23 @@ def refresh_image(
 @callback(
     Output("rec_img", "src"),
     Input("img-slider", "value"),
-    Input("jobs-table", "selected_rows"),
-    Input("jobs-table", "data"),
     Input("current-target-size", "data"),
 )
 def refresh_reconstruction(
     img_ind,
-    row,
-    data_table,
     target_size,
 ):
     """
     This callback refreshes the reconstructed image according to the selected job type
     Args:
         img_ind:            Image index
-        row:                Selected row (job)
-        data_table:         Lists of jobs
         target_size:        Target size
     Returns:
         rec_img:            Reconstructed image
     """
-    # Get selected job type
-    if row and len(row) > 0:
-        selected_job_type = data_table[row[0]]["job_type"]
-    else:
-        selected_job_type = None
-
-    if selected_job_type == "prediction_model":
-        job_id = data_table[row[0]]["experiment_id"]
-        reconstructed_path = f"{DATA_DIR}/mlex_store/{USER}/{job_id}"
-        if os.path.exists(f"{reconstructed_path}/reconstructed_{img_ind}.jpg"):
-            reconst_img = Image.open(
-                f"{reconstructed_path}/reconstructed_{img_ind}.jpg"
-            )
-        else:
-            reconst_img = Image.fromarray(
-                (np.zeros((target_size[1], target_size[0])).astype(np.uint8))
-            )
-
-    else:
-        reconst_img = Image.fromarray(
-            (np.zeros((target_size[1], target_size[0])).astype(np.uint8))
-        )
+    reconst_img = Image.fromarray(
+        (np.zeros((target_size[1], target_size[0])).astype(np.uint8))
+    )
 
     return plot_figure(reconst_img)
 
