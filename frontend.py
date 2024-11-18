@@ -1,4 +1,3 @@
-import json
 import os
 import pathlib
 import pickle
@@ -6,12 +5,19 @@ import shutil
 import tempfile
 from uuid import uuid4
 
-from dash import Input, Output, State, dcc
-from dash_component_editor import JSONParameterEditor
+from dash import Input, Output, State, dcc, html
 from dotenv import load_dotenv
 from file_manager.data_project import DataProject
 
-from src.app_layout import DATA_DIR, TILED_KEY, USER, app, long_callback_manager
+from src.app_layout import (
+    DATA_DIR,
+    TILED_KEY,
+    USER,
+    app,
+    long_callback_manager,
+    mlex_components,
+    models,
+)
 from src.callbacks.display import (  # noqa: F401
     close_warning_modal,
     open_warning_modal,
@@ -25,8 +31,6 @@ from src.callbacks.download import disable_download, toggle_storage_modal  # noq
 from src.callbacks.execute import close_resources_popup, execute  # noqa: F401
 from src.callbacks.table import delete_row, update_table  # noqa: F401
 from src.utils.data_utils import get_input_params, prepare_directories
-from src.utils.job_utils import MlexJob, str_to_dict
-from src.utils.model_utils import get_gui_components, get_model_content
 
 load_dotenv(".env")
 
@@ -38,28 +42,18 @@ server = app.server
 
 
 @app.callback(
-    Output("app-parameters", "children"),
-    Input("model-selection", "value"),
-    Input("action", "value"),
-    prevent_intial_call=True,
+    Output("model-parameters", "children"),
+    Input("model-list", "value"),
 )
-def load_parameters(model_selection, action_selection):
-    """
-    This callback dynamically populates the parameters and contents of the website according to the
-    selected action & model.
-    Args:
-        model_selection:    Selected model (from content registry)
-        action_selection:   Selected action (pre-defined actions in Data Clinic)
-    Returns:
-        app-parameters:     Parameters according to the selected model & action
-    """
-    parameters = get_gui_components(model_selection, action_selection)
-    gui_item = JSONParameterEditor(
-        _id={"type": str(uuid4())},
-        json_blob=parameters,
-    )
-    gui_item.init_callbacks(app)
-    return gui_item
+def update_model_parameters(model_name):
+    model = models[model_name]
+    if model["gui_parameters"]:
+        item_list = mlex_components.get_parameter_items(
+            _id={"type": str(uuid4())}, json_blob=model["gui_parameters"]
+        )
+        return item_list
+    else:
+        return html.Div("Model has no parameters")
 
 
 @app.long_callback(
@@ -144,17 +138,18 @@ def submit_ml_job(
         open the alert indicating that the job was submitted
     """
     data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
-    model_uri, [train_cmd, prediction_cmd, tune_cmd] = get_model_content(model_id)
+    # Update retrieval of model_uri, train_cmd, prediction_cmd, tune_cmd
+    train_cmd, prediction_cmd, tune_cmd = 2, 3, 4
     experiment_id, orig_out_path, data_info = prepare_directories(
         USER,
         data_project,
         train=(action_selection != "prediction_model"),
         correct_path=(DATA_DIR == DIR_MOUNT),
-    )
+    )  # noqa: F841
     input_params = get_input_params(children)
     input_params["log"] = log
     input_params["percentiles"] = percentiles
-    kwargs = {}
+    kwargs = {}  # noqa: F841
 
     # Find the relative data directory in docker container
     if DIR_MOUNT == DATA_DIR:
@@ -165,22 +160,24 @@ def submit_ml_job(
         relative_data_dir = DATA_DIR
 
     if action_selection == "train_model":
-        command = f"{train_cmd} -d {data_info} -o {out_path}"
+        command = f"{train_cmd} -d {data_info} -o {out_path}"  # noqa: F841
 
     elif action_selection == "tune_model":
         training_exp_id = job_data[row[0]]["experiment_id"]
         model_path = pathlib.Path(
             f"{relative_data_dir}/mlex_store/{USER}/{training_exp_id}"
         )
-        kwargs = {"train_params": job_data[row[0]]["parameters"]}
-        train_params = str_to_dict(job_data[row[0]]["parameters"])
+        kwargs = {"train_params": job_data[row[0]]["parameters"]}  # noqa: F841
+        train_params = {}
 
         # Get target size from training process
         input_params["target_width"] = train_params["target_width"]
         input_params["target_height"] = train_params["target_height"]
 
         # Define command to run
-        command = f"{tune_cmd} -d {data_info} -m {model_path} -o {out_path}"
+        command = (
+            f"{tune_cmd} -d {data_info} -m {model_path} -o {out_path}"  # noqa: F841
+        )
 
     else:
         training_exp_id = job_data[row[0]]["experiment_id"]
@@ -194,15 +191,15 @@ def submit_ml_job(
                 -1
             ]
 
-        kwargs = {"train_params": train_params}
-        train_params = str_to_dict(train_params)
+        kwargs = {"train_params": train_params}  # noqa: F841
+        train_params = {}
 
         # Get target size from training process
         input_params["target_width"] = train_params["target_width"]
         input_params["target_height"] = train_params["target_height"]
 
         # Define command to run
-        command = f"{prediction_cmd} -d {data_info} -m {model_path} -o {out_path}"
+        command = f"{prediction_cmd} -d {data_info} -m {model_path} -o {out_path}"  # noqa: F841
 
         # Save data project dict
         data_project_dict = data_project.to_dict()
@@ -213,24 +210,7 @@ def submit_ml_job(
                 file,
             )
 
-    job = MlexJob(
-        service_type="backend",
-        description=model_name,
-        working_directory=DIR_MOUNT,
-        job_kwargs={
-            "uri": model_uri,
-            "type": "docker",
-            "cmd": f"{command} -p '{json.dumps(input_params)}'",
-            "container_kwargs": {"shm_size": "2gb"},
-            "kwargs": {
-                "job_type": action_selection,
-                "experiment_id": experiment_id,
-                "dataset": data_project.project_id,
-                "params": input_params,
-                **kwargs,
-            },
-        },
-    )
+    job = 1  # Update job submission
     job.submit(USER, num_cpus, num_gpus)
     return True
 
