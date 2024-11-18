@@ -2,12 +2,11 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html
 
 
-def main_display(loss_plot, job_table):
+def main_display(loss_plot):
     """
     Creates the dash components within the main display in the app
     Args:
         loss_plot:          Loss plot of trainin process
-        job_table:          Job table
     """
     main_display = html.Div(
         [
@@ -125,7 +124,6 @@ def main_display(loss_plot, job_table):
                 ],
             ),
             html.Div(loss_plot),
-            job_table,
             dcc.Interval(id="interval", interval=5 * 1000, n_intervals=0),
         ]
     )
