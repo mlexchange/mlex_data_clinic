@@ -13,7 +13,7 @@ def sidebar(file_explorer, job_manager, models):
     Args:
         file_explorer:      Dash file explorer
         job_manager:        Job manager object
-        models:             Currently available ML algorithms in content registry
+        models:             Currently available ML algorithms
     """
     model_list = [{"label": model, "value": model} for model in models.modelname_list]
     sidebar = [
