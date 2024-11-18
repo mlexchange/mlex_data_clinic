@@ -1,16 +1,21 @@
 import dash_bootstrap_components as dbc
-from dash import dcc
+from dash import dcc, html
+from mlex_utils.dash_utils.components_bootstrap.component_utils import (
+    DbcControlItem as ControlItem,
+)
 
 from src.utils.mask_utils import get_mask_options
 
 
-def sidebar(file_explorer, models):
+def sidebar(file_explorer, job_manager, models):
     """
     Creates the dash components in the left sidebar of the app
     Args:
         file_explorer:      Dash file explorer
+        job_manager:        Job manager object
         models:             Currently available ML algorithms in content registry
     """
+    model_list = [{"label": model, "value": model} for model in models.modelname_list]
     sidebar = [
         dbc.Accordion(
             id="sidebar",
@@ -75,85 +80,25 @@ def sidebar(file_explorer, models):
                     ],
                 ),
                 dbc.AccordionItem(
-                    title="Model configuration",
-                    children=[
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    dbc.Label(
-                                        "Action",
-                                        style={
-                                            "height": "100%",
-                                            "display": "flex",
-                                            "align-items": "center",
-                                        },
-                                    ),
-                                    width=2,
+                    [
+                        ControlItem(
+                            "Algorithm",
+                            "select-algorithm",
+                            dbc.Select(
+                                id="model-list",
+                                options=model_list,
+                                value=(
+                                    model_list[0]["value"]
+                                    if model_list[0]["value"]
+                                    else None
                                 ),
-                                dbc.Col(
-                                    dcc.Dropdown(
-                                        id="action",
-                                        options=[
-                                            {"label": "Train", "value": "train_model"},
-                                            {"label": "Tune", "value": "tune_model"},
-                                            {
-                                                "label": "Prediction",
-                                                "value": "prediction_model",
-                                            },
-                                        ],
-                                        value="train_model",
-                                    ),
-                                    width=10,
-                                ),
-                            ],
-                            className="mb-3",
+                            ),
                         ),
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    dbc.Label(
-                                        "Model",
-                                        style={
-                                            "height": "100%",
-                                            "display": "flex",
-                                            "align-items": "center",
-                                        },
-                                    ),
-                                    width=2,
-                                ),
-                                dbc.Col(
-                                    dcc.Dropdown(
-                                        id="model-selection",
-                                        options=models,
-                                        value=models[0]["value"],
-                                    ),
-                                    width=10,
-                                ),
-                            ],
-                            className="mb-3",
-                        ),
-                        dbc.Card(
-                            [
-                                dbc.CardBody(
-                                    id="app-parameters",
-                                    style={
-                                        "overflowY": "scroll",
-                                        "height": "58vh",  # Adjust as needed
-                                    },
-                                ),
-                            ]
-                        ),
-                        dbc.Button(
-                            "Execute",
-                            id="execute",
-                            n_clicks=0,
-                            style={
-                                "width": "100%",
-                                "margin-left": "0px",
-                                "margin-top": "10px",
-                            },
-                        ),
+                        html.Div(id="model-parameters"),
+                        html.P(),
+                        job_manager,
                     ],
+                    title="Model Configuration",
                 ),
             ],
         ),

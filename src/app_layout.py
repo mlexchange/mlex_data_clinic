@@ -8,15 +8,14 @@ from dash import dcc, html
 from dash.long_callback import DiskcacheLongCallbackManager
 from dotenv import load_dotenv
 from file_manager.main import FileManager
+from mlex_utils.dash_utils.mlex_components import MLExComponents
 
 from src.components.header import header
-from src.components.job_table import job_table
 from src.components.loss import loss_plot
 from src.components.main_display import main_display
 from src.components.resources_setup import resources_setup
 from src.components.sidebar import sidebar
-from src.utils.job_utils import get_host
-from src.utils.model_utils import get_model_list
+from src.utils.model_utils import Models
 
 load_dotenv(".env")
 
@@ -28,8 +27,8 @@ DEFAULT_TILED_SUB_URI = os.getenv("DEFAULT_TILED_SUB_URI")
 TILED_KEY = os.getenv("TILED_KEY")
 if TILED_KEY == "":
     TILED_KEY = None
-HOST_NICKNAME = os.getenv("HOST_NICKNAME")
-num_processors, num_gpus = get_host(HOST_NICKNAME)
+MODELFILE_PATH = os.getenv("MODELFILE_PATH", "./examples/assets/models.json")
+num_processors, num_gpus = 1, 0
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -51,6 +50,8 @@ app = dash.Dash(
 )
 app.title = "Data Clinic"
 app._favicon = "mlex.ico"
+
+# SETUP FILE MANAGER
 dash_file_explorer = FileManager(
     DATA_DIR,
     open_explorer=False,
@@ -58,6 +59,14 @@ dash_file_explorer = FileManager(
     logger=logger,
 )
 dash_file_explorer.init_callbacks(app)
+file_explorer = dash_file_explorer.file_explorer
+
+# SETUP MLEx COMPONENTS
+mlex_components = MLExComponents("dbc")
+job_manager = mlex_components.get_job_manager(mode="dev")
+
+# GET MODELS
+models = Models(modelfile_path="./src/assets/default_models.json")
 
 # DEFINE LAYOUT
 app.layout = html.Div(
@@ -70,10 +79,10 @@ app.layout = html.Div(
                 dbc.Row(
                     [
                         dbc.Col(
-                            sidebar(dash_file_explorer.file_explorer, get_model_list()),
+                            sidebar(file_explorer, job_manager, models),
                             width=4,
                         ),
-                        dbc.Col(main_display(loss_plot(), job_table()), width=8),
+                        dbc.Col(main_display(loss_plot()), width=8),
                         html.Div(id="dummy-output"),
                     ]
                 ),
