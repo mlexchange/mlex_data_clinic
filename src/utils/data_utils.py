@@ -1,9 +1,20 @@
+import hashlib
 import pathlib
 import uuid
 
 import pandas as pd
 
 from src.app_layout import DATA_DIR, TILED_KEY
+
+
+def hash_list_of_strings(strings_list):
+    """
+    Produces a hash of a list of strings.
+    """
+    concatenated_string = "".join(strings_list)
+    hash_object = hashlib.sha256()
+    hash_object.update(concatenated_string.encode("utf-8"))
+    return hash_object.hexdigest()
 
 
 def prepare_directories(user_id, data_project, train=True, correct_path=False):
