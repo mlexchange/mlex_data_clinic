@@ -27,80 +27,82 @@
                 "value": 32
             },
             {
-                "type": "float",
+                "type": "slider",
                 "name": "horz_flip_prob",
                 "title": "Horizontal Flip",
                 "param_key": "horz_flip_prob",
-                "value": 0
+                "min": 0,
+                "max": 1,
+                "step": 0.1,
+                "value": 0.5,
+                "marks": {
+                    "0": "0",
+                    "0.5": "0.5",
+                    "1": "1"
+                }
             },
             {
-                "type": "float",
+                "type": "slider",
                 "name": "vert_flip_prob",
                 "title": "Vertical Flip",
                 "param_key": "vert_flip_prob",
-                "value": 0
+                "min": 0,
+                "max": 1,
+                "step": 0.1,
+                "value": 0.5,
+                "marks": {
+                    "0": "0",
+                    "0.5": "0.5",
+                    "1": "1"
+                }
             },
             {
                 "type": "float",
                 "name": "brightness",
                 "title": "Brightness Factor",
                 "param_key": "brightness",
-                "value": 0
+                "value": 1
             },
             {
                 "type": "float",
                 "name": "contrast",
                 "title": "Contrast Factor",
                 "param_key": "contrast",
-                "value": 0
+                "value": 1
             },
             {
                 "type": "float",
                 "name": "saturation",
                 "title": "Saturation Factor",
                 "param_key": "saturation",
-                "value": 0
+                "value": 1
             },
             {
-                "type": "float",
+                "type": "slider",
                 "name": "hue",
                 "title": "Hue Factor",
                 "param_key": "hue",
-                "value": 0
+                "min": -0.5,
+                "max": 0.5,
+                "step": 0.1,
+                "value": 0,
+                "marks": {
+                    "-0.5": "-0.5",
+                    "0": "0",
+                    "0.5": "0.5"
+                }
             },
             {
-                "type": "radio",
+                "type": "bool",
                 "name": "augm_invariant",
                 "title": "Augmentation invariant",
-                "param_key": "augm_invariant",
-                "value": true,
-                "options": [
-                    {
-                        "label": "True",
-                        "value": true
-                    },
-                    {
-                        "label": "False",
-                        "value": false
-                    }
-                ]
+                "param_key": "augm_invariant"
             },
             {
-                "type": "radio",
+                "type": "bool",
                 "name": "shuffle",
                 "title": "Shuffle Data",
-                "param_key": "shuffle",
-                "value": true,
-                "options": [
-                    {
-                        "label": "True",
-                        "value": true
-                    },
-                    {
-                        "label": "False",
-                        "value": false
-                    }
-                ]
+                "param_key": "shuffle"
             },
             {
                 "type": "slider",
