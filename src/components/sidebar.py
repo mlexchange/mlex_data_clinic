@@ -27,55 +27,37 @@ def sidebar(file_explorer, job_manager, models):
                 dbc.AccordionItem(
                     title="Data transformation",
                     children=[
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    dbc.Label("Log Transform"), width=4, align="start"
-                                ),
-                                dbc.Col(
-                                    dbc.Switch(
-                                        id="log-transform",
-                                        value=False,
-                                        label_style={"display": "none"},
-                                        style={"height": "20px"},
-                                    ),
-                                    align="start",
-                                ),
-                            ],
+                        ControlItem(
+                            "",
+                            "empty-title",
+                            dbc.Switch(
+                                id="log-transform",
+                                value=False,
+                                label="Log Transform",
+                            ),
                         ),
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    dbc.Label("Min-Max Percentile"),
-                                    width=4,
-                                ),
-                                dbc.Col(
-                                    dcc.RangeSlider(
-                                        id="min-max-percentile",
-                                        min=0,
-                                        max=100,
-                                        tooltip={
-                                            "placement": "bottom",
-                                            "always_visible": True,
-                                        },
-                                    ),
-                                ),
-                            ],
-                            style={"margin-bottom": "10px"},
+                        html.P(),
+                        ControlItem(
+                            "Min-Max Percentile",
+                            "min-max-percentile-title",
+                            dcc.RangeSlider(
+                                id="min-max-percentile",
+                                min=0,
+                                max=100,
+                                tooltip={
+                                    "placement": "bottom",
+                                    "always_visible": True,
+                                },
+                            ),
                         ),
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    dbc.Label("Mask Selection"),
-                                    width=4,
-                                ),
-                                dbc.Col(
-                                    dcc.Dropdown(
-                                        id="mask-dropdown",
-                                        options=get_mask_options(),
-                                    ),
-                                ),
-                            ]
+                        html.P(),
+                        ControlItem(
+                            "Mask Selection",
+                            "mask-dropdown-title",
+                            dbc.Select(
+                                id="mask-dropdown",
+                                options=get_mask_options(),
+                            ),
                         ),
                     ],
                 ),
