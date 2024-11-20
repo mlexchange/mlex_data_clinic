@@ -1,9 +1,12 @@
 import base64
 
+import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
+from dash import html
+from dash_iconify import DashIconify
 
 
 def generate_loss_plot(loss_file_path):
@@ -130,3 +133,30 @@ def get_bottleneck(ls_var, width, height, annotations=True):
     png = plotly.io.to_image(fig)
     png_base64 = base64.b64encode(png).decode("ascii")
     return "data:image/png;base64,{}".format(png_base64)
+
+
+def generate_notification(title, color, icon, message=""):
+    iconify_icon = DashIconify(
+        icon=icon,
+        width=24,
+        height=24,
+        style={"verticalAlign": "middle"},
+    )
+    return dbc.Toast(
+        [html.P(message, className="mb-0")],
+        id="auto-toast",
+        header=[
+            iconify_icon,
+            html.Span(title, style={"margin-left": "10px"}),
+        ],
+        duration=4000,
+        is_open=True,
+        color=color,
+        style={
+            "position": "fixed",
+            "top": 66,
+            "right": 10,
+            "width": 350,
+            "zIndex": 9999,
+        },
+    )
