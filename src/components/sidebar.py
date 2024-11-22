@@ -7,15 +7,13 @@ from mlex_utils.dash_utils.components_bootstrap.component_utils import (
 from src.utils.mask_utils import get_mask_options
 
 
-def sidebar(file_explorer, job_manager, models):
+def sidebar(file_explorer, job_manager):
     """
     Creates the dash components in the left sidebar of the app
     Args:
         file_explorer:      Dash file explorer
         job_manager:        Job manager object
-        models:             Currently available ML algorithms
     """
-    model_list = [{"label": model, "value": model} for model in models.modelname_list]
     sidebar = [
         dbc.Accordion(
             id="sidebar",
@@ -62,24 +60,7 @@ def sidebar(file_explorer, job_manager, models):
                     ],
                 ),
                 dbc.AccordionItem(
-                    [
-                        ControlItem(
-                            "Algorithm",
-                            "select-algorithm",
-                            dbc.Select(
-                                id="model-list",
-                                options=model_list,
-                                value=(
-                                    model_list[0]["value"]
-                                    if model_list[0]["value"]
-                                    else None
-                                ),
-                            ),
-                        ),
-                        html.Div(id="model-parameters"),
-                        html.P(),
-                        job_manager,
-                    ],
+                    job_manager,
                     title="Model Configuration",
                 ),
             ],

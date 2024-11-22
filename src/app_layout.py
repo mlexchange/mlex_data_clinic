@@ -59,12 +59,14 @@ dash_file_explorer = FileManager(
 dash_file_explorer.init_callbacks(app)
 file_explorer = dash_file_explorer.file_explorer
 
-# SETUP MLEx COMPONENTS
-mlex_components = MLExComponents("dbc")
-job_manager = mlex_components.get_job_manager(mode="dev")
-
 # GET MODELS
 models = Models(modelfile_path="./src/assets/default_models.json")
+
+# SETUP MLEx COMPONENTS
+mlex_components = MLExComponents("dbc")
+job_manager = mlex_components.get_job_manager(
+    model_list=models.modelname_list, mode="dev"
+)
 
 # DEFINE LAYOUT
 app.layout = html.Div(
@@ -77,7 +79,7 @@ app.layout = html.Div(
                 dbc.Row(
                     [
                         dbc.Col(
-                            sidebar(file_explorer, job_manager, models),
+                            sidebar(file_explorer, job_manager),
                             width=4,
                         ),
                         dbc.Col(main_display(loss_plot()), width=8),

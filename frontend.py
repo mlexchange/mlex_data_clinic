@@ -4,7 +4,7 @@ import shutil
 import tempfile
 from uuid import uuid4
 
-from dash import Input, Output, State, dcc, html
+from dash import MATCH, Input, Output, State, dcc, html
 from dotenv import load_dotenv
 
 from src.app_layout import (
@@ -37,8 +37,22 @@ server = app.server
 
 
 @app.callback(
-    Output("model-parameters", "children"),
-    Input("model-list", "value"),
+    Output(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "model_parameters",
+            "aio_id": MATCH,
+        },
+        "children",
+    ),
+    Input(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "model_list",
+            "aio_id": MATCH,
+        },
+        "value",
+    ),
 )
 def update_model_parameters(model_name):
     model = models[model_name]

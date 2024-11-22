@@ -35,9 +35,23 @@ PREFECT_TAGS = os.getenv("PREFECT_TAGS", ["data-clinic"])
         },
         "n_clicks",
     ),
-    State("model-parameters", "children"),
+    State(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "model_parameters",
+            "aio_id": MATCH,
+        },
+        "children",
+    ),
     State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
-    State("model-list", "value"),
+    State(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "model_list",
+            "aio_id": MATCH,
+        },
+        "value",
+    ),
     State("log-transform", "value"),
     State("min-max-percentile", "value"),
     State(
@@ -118,3 +132,7 @@ def run_train(
     )
 
     return notification
+
+
+# TODO: Fix the display of the parameters according to the selection of the training job!
+# TODO: Test running a training job
