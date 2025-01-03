@@ -18,7 +18,7 @@ from src.utils.model_utils import Models
 
 load_dotenv(".env")
 
-USER = "admin"
+USER = os.getenv("USER", "admin")
 DATA_DIR = os.getenv("DATA_DIR", "data")
 SPLASH_URL = os.getenv("SPLASH_URL")
 DEFAULT_TILED_URI = os.getenv("DEFAULT_TILED_URI")
@@ -66,7 +66,7 @@ models = Models(modelfile_path="./src/assets/default_models.json")
 # SETUP MLEx COMPONENTS
 mlex_components = MLExComponents("dbc")
 job_manager = mlex_components.get_job_manager(
-    model_list=models.modelname_list, mode=MODE
+    model_list=models.modelname_list, mode=MODE, aio_id="data-clinic-jobs"
 )
 
 # DEFINE LAYOUT
@@ -88,6 +88,7 @@ app.layout = html.Div(
                     ]
                 ),
                 dcc.Store(id="current-target-size", data=[0, 0]),
+                dcc.Store(id="project-name", data=""),
             ],
             fluid=True,
         ),

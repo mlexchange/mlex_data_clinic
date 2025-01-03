@@ -1,19 +1,18 @@
-import pathlib
-import pickle
-
 import numpy as np
 from dash import ALL, Input, Output, State, callback
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
+from mlex_utils.prefect_utils.core import get_children_flow_run_ids
 from PIL import Image
 
-from src.app_layout import DATA_DIR, TILED_KEY, USER
+from src.app_layout import TILED_KEY, USER
+from src.utils.data_utils import hash_list_of_strings, tiled_results
 from src.utils.plot_utils import get_bottleneck, plot_figure
 
 
 @callback(
     Output("current-target-size", "data"),
-    Output("ls_graph", "src"),
+    Output("ls-graph", "src"),
     Input(
         {
             "type": ALL,
@@ -68,74 +67,20 @@ def refresh_bottleneck(
 
 
 @callback(
-    Output("img-slider", "max", allow_duplicate=True),
-    Output("img-slider", "value", allow_duplicate=True),
-    Input("jobs-table", "selected_rows"),
-    Input("jobs-table", "data"),
-    State("img-slider", "value"),
-    prevent_initial_call=True,
-)
-def update_slider_boundaries_prediction(
-    row,
-    data_table,
-    slider_ind,
-):
-    """
-    This callback updates the slider boundaries according to the selected job type
-    Args:
-        row:                Selected row (job)
-        data_table:         Lists of jobs
-        slider_ind:         Slider index
-    Returns:
-        img-slider:         Maximum value of the slider
-        img-slider:         Slider index
-    """
-    # Get selected job type
-    if row and len(row) > 0:
-        selected_job_type = data_table[row[0]]["job_type"]
-    else:
-        selected_job_type = None
-
-    # If selected job type is train_model or tune_model
-    if selected_job_type == "prediction_model":
-        job_id = data_table[row[0]]["experiment_id"]
-        data_path = pathlib.Path(f"{DATA_DIR}/mlex_store/{USER}/{job_id}")
-
-        with open(f"{data_path}/.file_manager_vars.pkl", "rb") as file:
-            data_project_dict = pickle.load(file)
-        data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
-
-        # Check if slider index is out of bounds
-        if (
-            len(data_project.datasets) > 0
-            and slider_ind > data_project.datasets[-1].cumulative_data_count - 1
-        ):
-            slider_ind = 0
-
-        return data_project.datasets[-1].cumulative_data_count - 1, slider_ind
-
-    else:
-        raise PreventUpdate
-
-
-@callback(
     Output("img-slider", "max"),
     Output("img-slider", "value"),
     Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
-    Input("jobs-table", "selected_rows"),
     State("img-slider", "value"),
     prevent_initial_call=True,
 )
 def update_slider_boundaries_new_dataset(
     data_project_dict,
-    row,
     slider_ind,
 ):
     """
     This callback updates the slider boundaries according to the selected job type
     Args:
         data_project_dict:  Data project dictionary
-        row:                Selected row (job)
         slider_ind:         Slider index
     Returns:
         img-slider:         Maximum value of the slider
@@ -155,7 +100,7 @@ def update_slider_boundaries_new_dataset(
 
 
 @callback(
-    Output("orig_img", "src"),
+    Output("orig-img", "src"),
     Output("data-size-out", "children"),
     Input("img-slider", "value"),
     Input("current-target-size", "data"),
@@ -209,27 +154,54 @@ def refresh_image(
 
 
 @callback(
-    Output("rec_img", "src"),
+    Output("project-name", "data"),
+    Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
+    prevent_initial_call=True,
+)
+def update_project_name(data_project_dict):
+    data_project = DataProject.from_dict(data_project_dict)
+    data_uris = [dataset.uri for dataset in data_project.datasets]
+    project_name = hash_list_of_strings(data_uris)
+    return project_name
+
+
+@callback(
+    Output("rec-img", "src", allow_duplicate=True),
+    Input("show-reconstructions", "value"),
     Input("img-slider", "value"),
     Input("current-target-size", "data"),
+    State(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "train-dropdown",
+            "aio_id": "data-clinic-jobs",
+        },
+        "value",
+    ),
+    State("project-name", "data"),
+    prevent_initial_call=True,
 )
-def refresh_reconstruction(
-    img_ind,
-    target_size,
-):
+def refresh_reconstruction(show_recons, img_ind, target_size, job_id, project_name):
     """
-    This callback refreshes the reconstructed image according to the selected job type
+    This callback refreshes the reconstructed image according to the selected job
     Args:
+        show_recons:        Show reconstructed image
         img_ind:            Image index
         target_size:        Target size
+        job_id:             Selected job
+        project_name:       Data project name
     Returns:
         rec_img:            Reconstructed image
     """
-    reconst_img = Image.fromarray(
-        (np.zeros((target_size[1], target_size[0])).astype(np.uint8))
-    )
-
-    return plot_figure(reconst_img)
+    if show_recons:
+        child_job_id = get_children_flow_run_ids(job_id)[1]
+        expected_result_uri = f"{USER}/{project_name}/{child_job_id}/reconstructions"
+        recons_array = tiled_results.get_data_by_trimmed_uri(
+            expected_result_uri, slice=img_ind
+        )
+    else:
+        recons_array = np.zeros((target_size[1], target_size[0])).astype(np.uint8)
+    return plot_figure(Image.fromarray(recons_array))
 
 
 @callback(
