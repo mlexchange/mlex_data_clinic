@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urljoin
 
 from src.utils.data_utils import hash_list_of_strings
 
@@ -64,25 +65,35 @@ INFERENCE_PARAMS_EXAMPLE = {
 }
 
 
-def parse_train_job_params(data_project, model_parameters, model_name):
+def parse_tiled_url(url, user, project_name, tiled_base_path="/api/v1/metadata"):
+    """
+    Given any URL (e.g. http://localhost:8000/results),
+    return the same scheme/netloc but with path='/api/v1/metadata'.
+    """
+    if tiled_base_path not in url:
+        url = urljoin(url, os.path.join(tiled_base_path, user, project_name))
+    else:
+        url = urljoin(url, f"/{user}/{project_name}")
+    return url
+
+
+def parse_train_job_params(data_project, model_parameters, model_name, user):
     """
     Parse training job parameters
     """
     # TODO: Use model_name to define the conda_env/algorithm to be executed
-
     data_uris = [dataset.uri for dataset in data_project.datasets]
+    project_name = hash_list_of_strings(data_uris)
     io_parameters = {
         "uid_retrieve": "",
         "data_uris": data_uris,
         "data_tiled_api_key": data_project.api_key,
         "data_type": data_project.data_type,
         "root_uri": data_project.root_uri,
-        "models_dir": f"{RESULTS_DIR}/models",
-        "feature_vectors_tiled_uri": f"{RESULTS_TILED_URI}/feature_vectors",
-        "recons_tiled_uri": f"{RESULTS_TILED_URI}/recons",
+        "model_dir": f"{RESULTS_DIR}/models",
+        "results_tiled_uri": parse_tiled_url(RESULTS_TILED_URI, user, project_name),
         "results_tiled_api_key": RESULTS_TILED_API_KEY,
-        "feature_vectors_dir": f"{RESULTS_DIR}/feature_vectors",
-        "recons_dir": f"{RESULTS_DIR}/recons",
+        "results_dir": f"{RESULTS_DIR}",
     }
 
     TRAIN_PARAMS_EXAMPLE["params_list"][0]["params"]["io_parameters"] = io_parameters
@@ -95,7 +106,7 @@ def parse_train_job_params(data_project, model_parameters, model_name):
         "model_parameters"
     ] = model_parameters
 
-    return TRAIN_PARAMS_EXAMPLE, hash_list_of_strings(data_uris)
+    return TRAIN_PARAMS_EXAMPLE, project_name
 
 
 def parse_model_params(model_parameters_html, log, percentiles):
