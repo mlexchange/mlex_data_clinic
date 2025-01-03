@@ -25,7 +25,7 @@ def main_display(loss_plot):
                                             parent_className="transparent-loader-wrapper",
                                             children=[
                                                 html.Img(
-                                                    id="orig_img",
+                                                    id="orig-img",
                                                     title="Input Image",
                                                     style={
                                                         "width": "15vw",
@@ -38,7 +38,7 @@ def main_display(loss_plot):
                                             type="circle",
                                         ),
                                         html.Img(
-                                            id="ls_graph",
+                                            id="ls-graph",
                                             title="",
                                             style={
                                                 "width": "30vw",
@@ -51,7 +51,7 @@ def main_display(loss_plot):
                                             id="loading-recons",
                                             parent_className="transparent-loader-wrapper",
                                             children=html.Img(
-                                                id="rec_img",
+                                                id="rec-img",
                                                 title="Reconstructed Image",
                                                 style={
                                                     "width": "15vw",
