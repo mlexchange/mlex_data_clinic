@@ -1,8 +1,6 @@
 import os
 from urllib.parse import urljoin
 
-from src.utils.data_utils import hash_list_of_strings
-
 RESULTS_DIR = os.getenv("RESULTS_DIR", "")
 RESULTS_TILED_URI = os.getenv("RESULTS_TILED_URI", "")
 RESULTS_TILED_API_KEY = os.getenv("RESULTS_TILED_API_KEY", "")
@@ -77,13 +75,14 @@ def parse_tiled_url(url, user, project_name, tiled_base_path="/api/v1/metadata")
     return url
 
 
-def parse_train_job_params(data_project, model_parameters, model_name, user):
+def parse_train_job_params(
+    data_project, model_parameters, model_name, user, project_name
+):
     """
     Parse training job parameters
     """
     # TODO: Use model_name to define the conda_env/algorithm to be executed
     data_uris = [dataset.uri for dataset in data_project.datasets]
-    project_name = hash_list_of_strings(data_uris)
     io_parameters = {
         "uid_retrieve": "",
         "data_uris": data_uris,
