@@ -24,6 +24,7 @@ dependencies = [
     "flask==3.0.0",
     "Flask-Caching",
     "kaleido",
+    "humanhash3",
     "mlex_file_manager@git+https://github.com/mlexchange/mlex_file_manager.git",
     "mlex_utils[all]@git+https://github.com/mlexchange/mlex_utils.git",
     "numpy>=1.19.5",
