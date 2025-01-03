@@ -27,7 +27,7 @@ def sidebar(file_explorer, job_manager):
                     children=[
                         ControlItem(
                             "",
-                            "empty-title",
+                            "empty-title-log-transform",
                             dbc.Switch(
                                 id="log-transform",
                                 value=False,
@@ -60,7 +60,19 @@ def sidebar(file_explorer, job_manager):
                     ],
                 ),
                 dbc.AccordionItem(
-                    job_manager,
+                    children=[
+                        job_manager,
+                        ControlItem(
+                            "",
+                            "empty-title-recons",
+                            dbc.Switch(
+                                id="show-reconstructions",
+                                value=False,
+                                label="Show Reconstructions",
+                                disabled=True,
+                            ),
+                        ),
+                    ],
                     title="Model Configuration",
                 ),
             ],
