@@ -27,6 +27,7 @@ TILED_KEY = os.getenv("TILED_KEY")
 if TILED_KEY == "":
     TILED_KEY = None
 MODELFILE_PATH = os.getenv("MODELFILE_PATH", "./examples/assets/models.json")
+MODE = os.getenv("MODE", "dev")
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -65,7 +66,7 @@ models = Models(modelfile_path="./src/assets/default_models.json")
 # SETUP MLEx COMPONENTS
 mlex_components = MLExComponents("dbc")
 job_manager = mlex_components.get_job_manager(
-    model_list=models.modelname_list, mode="dev"
+    model_list=models.modelname_list, mode=MODE
 )
 
 # DEFINE LAYOUT
