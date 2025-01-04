@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 import pytz
-from dash import MATCH, Input, Output, State, callback
+from dash import MATCH, Input, Output, State, callback, html
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 from mlex_utils.prefect_utils.core import (
@@ -23,6 +23,7 @@ MODE = os.getenv("MODE", "")
 TIMEZONE = os.getenv("TIMEZONE", "US/Pacific")
 FLOW_NAME = os.getenv("FLOW_NAME", "")
 PREFECT_TAGS = os.getenv("PREFECT_TAGS", ["data-clinic"])
+RESULTS_DIR = os.getenv("RESULTS_DIR", "")
 
 
 @callback(
@@ -93,7 +94,7 @@ def run_train(
     Returns:
         open the alert indicating that the job was submitted
     """
-    if n_clicks > 0:
+    if n_clicks is not None and n_clicks > 0:
         model_parameters, parameter_errors = parse_model_params(
             model_parameter_container, log, percentiles
         )
@@ -203,20 +204,98 @@ def allow_show_reconstructions(job_id, project_name):
     Determine whether to show reconstructions for the selected job. This callback checks whether a
     given job has completed and whether its reconstruction data is available.
     Args:
-        job_id:            Selected job
+        job_id:             Selected job
         project_name:       Data project name
         img_ind:            Image index
     Returns:
         rec_img:            Reconstructed image
     """
-    child_job_id = get_children_flow_run_ids(job_id)[1]
+    children_job_ids = get_children_flow_run_ids(job_id)
 
-    if get_flow_run_state(child_job_id) != "COMPLETED":
+    if (
+        len(children_job_ids) != 2
+        or get_flow_run_state(children_job_ids[1]) != "COMPLETED"
+    ):
         return True
 
+    child_job_id = children_job_ids[1]
     expected_result_uri = f"{USER}/{project_name}/{child_job_id}/reconstructions"
     try:
         tiled_results.get_data_by_trimmed_uri(expected_result_uri)
         return False
     except Exception:
         return True
+
+
+@callback(
+    Output(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "show-training-stats",
+            "aio_id": "data-clinic-jobs",
+        },
+        "disabled",
+    ),
+    Input(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "train-dropdown",
+            "aio_id": "data-clinic-jobs",
+        },
+        "value",
+    ),
+    prevent_initial_call=True,
+)
+def allow_show_stats(job_id):
+    children_job_ids = get_children_flow_run_ids(job_id)
+
+    if get_flow_run_state(children_job_ids[0]) != "COMPLETED":
+        return True
+
+    child_job_id = children_job_ids[0]  # training job
+
+    # Check if the report file exists
+    expected_report_path = f"{RESULTS_DIR}/models/{child_job_id}/report.html"
+    if os.path.exists(expected_report_path):
+        return False
+    else:
+        return True
+
+
+@callback(
+    Output("stats-card-body", "children"),
+    Output("show-plot", "is_open"),
+    Input(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "show-training-stats",
+            "aio_id": "data-clinic-jobs",
+        },
+        "value",
+    ),
+    State(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "train-dropdown",
+            "aio_id": "data-clinic-jobs",
+        },
+        "value",
+    ),
+    prevent_initial_call=True,
+)
+def show_training_stats(show_stats, job_id):
+    if show_stats:
+
+        children_job_ids = get_children_flow_run_ids(job_id)
+        child_job_id = children_job_ids[0]
+        expected_report_path = f"{RESULTS_DIR}/models/{child_job_id}/report.html"
+
+        with open(expected_report_path, "r") as f:
+            report_html = f.read()
+
+        return (
+            html.Iframe(srcDoc=report_html, style={"width": "100%", "height": "600px"}),
+            True,
+        )
+    else:
+        return [], False
