@@ -11,9 +11,9 @@ from file_manager.main import FileManager
 from mlex_utils.dash_utils.mlex_components import MLExComponents
 
 from src.components.header import header
-from src.components.loss import loss_plot
 from src.components.main_display import main_display
 from src.components.sidebar import sidebar
+from src.components.training_stats import training_stats_plot
 from src.utils.model_utils import Models
 
 load_dotenv(".env")
@@ -81,9 +81,9 @@ app.layout = html.Div(
                     [
                         dbc.Col(
                             sidebar(file_explorer, job_manager),
-                            width=4,
+                            style={"flex": "0 0 500px", "margin-top": "1em"},
                         ),
-                        dbc.Col(main_display(loss_plot()), width=8),
+                        dbc.Col(main_display(training_stats_plot())),
                         html.Div(id="dummy-output"),
                     ]
                 ),
