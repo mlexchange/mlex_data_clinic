@@ -271,7 +271,7 @@ def allow_show_stats(job_id):
             "subcomponent": "show-training-stats",
             "aio_id": "data-clinic-jobs",
         },
-        "value",
+        "n_clicks",
     ),
     State(
         {
@@ -283,8 +283,8 @@ def allow_show_stats(job_id):
     ),
     prevent_initial_call=True,
 )
-def show_training_stats(show_stats, job_id):
-    if show_stats:
+def show_training_stats(show_stats_n_clicks, job_id):
+    if show_stats_n_clicks > 0:
 
         children_job_ids = get_children_flow_run_ids(job_id)
         child_job_id = children_job_ids[0]
