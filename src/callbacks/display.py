@@ -154,7 +154,14 @@ def refresh_image(
 
 
 @callback(
-    Output("project-name", "data"),
+    Output(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "project-name-id",
+            "aio_id": "data-clinic-jobs",
+        },
+        "data",
+    ),
     Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
     prevent_initial_call=True,
 )
@@ -178,7 +185,14 @@ def update_project_name(data_project_dict):
         },
         "value",
     ),
-    State("project-name", "data"),
+    State(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "project-name-id",
+            "aio_id": "data-clinic-jobs",
+        },
+        "data",
+    ),
     prevent_initial_call=True,
 )
 def refresh_reconstruction(show_recons, img_ind, target_size, job_id, project_name):

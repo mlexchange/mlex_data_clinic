@@ -108,7 +108,7 @@ def parse_train_job_params(
     return TRAIN_PARAMS_EXAMPLE, project_name
 
 
-def parse_model_params(model_parameters_html, log, percentiles):
+def parse_model_params(model_parameters_html, log, percentiles, mask):
     """
     Extracts parameters from the children component of a ParameterItems component,
     if there are any errors in the input, it will return an error status
@@ -134,4 +134,36 @@ def parse_model_params(model_parameters_html, log, percentiles):
     # Manually add data transformation parameters
     input_params["log"] = log
     input_params["percentiles"] = percentiles
+    input_params["mask"] = mask if mask != "None" else None
     return input_params, errors
+
+
+def parse_inference_job_params(
+    data_project, model_parameters, model_name, user, project_name
+):
+    """
+    Parse training job parameters
+    """
+    # TODO: Use model_name to define the conda_env/algorithm to be executed
+    data_uris = [dataset.uri for dataset in data_project.datasets]
+    io_parameters = {
+        "uid_retrieve": "",
+        "data_uris": data_uris,
+        "data_tiled_api_key": data_project.api_key,
+        "data_type": data_project.data_type,
+        "root_uri": data_project.root_uri,
+        "model_dir": f"{RESULTS_DIR}/models",
+        "results_tiled_uri": parse_tiled_url(RESULTS_TILED_URI, user, project_name),
+        "results_tiled_api_key": RESULTS_TILED_API_KEY,
+        "results_dir": f"{RESULTS_DIR}",
+    }
+
+    INFERENCE_PARAMS_EXAMPLE["params_list"][0]["params"][
+        "io_parameters"
+    ] = io_parameters
+
+    INFERENCE_PARAMS_EXAMPLE["params_list"][0]["params"][
+        "model_parameters"
+    ] = model_parameters
+
+    return INFERENCE_PARAMS_EXAMPLE, project_name

@@ -28,6 +28,7 @@ if TILED_KEY == "":
     TILED_KEY = None
 MODELFILE_PATH = os.getenv("MODELFILE_PATH", "./examples/assets/models.json")
 MODE = os.getenv("MODE", "dev")
+PREFECT_TAGS = os.getenv("PREFECT_TAGS", ["data-clinic"])
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -66,7 +67,10 @@ models = Models(modelfile_path="./src/assets/default_models.json")
 # SETUP MLEx COMPONENTS
 mlex_components = MLExComponents("dbc")
 job_manager = mlex_components.get_job_manager(
-    model_list=models.modelname_list, mode=MODE, aio_id="data-clinic-jobs"
+    model_list=models.modelname_list,
+    mode=MODE,
+    aio_id="data-clinic-jobs",
+    prefect_tags=PREFECT_TAGS,
 )
 
 # DEFINE LAYOUT
@@ -81,14 +85,13 @@ app.layout = html.Div(
                     [
                         dbc.Col(
                             sidebar(file_explorer, job_manager),
-                            style={"flex": "0 0 500px", "margin-top": "1em"},
+                            style={"flex": "0 0 500px"},
                         ),
                         dbc.Col(main_display(training_stats_plot())),
                         html.Div(id="dummy-output"),
                     ]
                 ),
                 dcc.Store(id="current-target-size", data=[0, 0]),
-                dcc.Store(id="project-name", data=""),
             ],
             fluid=True,
         ),
