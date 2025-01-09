@@ -6,7 +6,7 @@ class Models:
         self.path = modelfile_path
         f = open(self.path)
         contents = json.load(f)["contents"]
-        self.modelname_list = [content["name"] for content in contents]
+        self.modelname_list = [content["model_name"] for content in contents]
         self.models = {}
 
         for i, n in enumerate(self.modelname_list):

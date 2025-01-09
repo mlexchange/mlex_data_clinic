@@ -1,8 +1,7 @@
 {
     "contents": [
         {
-        "content_type": "model",
-        "name": "pytorch_autoencoder_v0.0.5",
+        "model_name": "pytorch_autoencoder_v0.0.5",
         "version": "0.0.5",
         "type": "unsupervised",
         "owner": "mlexchange team",
