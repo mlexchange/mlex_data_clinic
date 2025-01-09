@@ -1,33 +1,11 @@
 import base64
 
 import dash_bootstrap_components as dbc
-import pandas as pd
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import html
 from dash_iconify import DashIconify
-
-
-def generate_loss_plot(loss_file_path):
-    """
-    Generate loss plot
-    Args:
-        loss_file_path:     Path to the loss file
-    Returns:
-        loss plot
-    """
-    df = pd.read_csv(loss_file_path)
-    df.set_index("epoch", inplace=True)
-    try:
-        fig = px.line(df, markers=True)
-        fig.update_layout(
-            xaxis_title="epoch", yaxis_title="loss", margin=dict(l=20, r=20, t=20, b=20)
-        )
-        return fig
-    except Exception as e:
-        print(e)
-        return go.Figure(go.Scatter(x=[], y=[]))
 
 
 def plot_figure(image):
@@ -142,21 +120,28 @@ def generate_notification(title, color, icon, message=""):
         height=24,
         style={"verticalAlign": "middle"},
     )
-    return dbc.Toast(
-        [html.P(message, className="mb-0")],
-        id="auto-toast",
-        header=[
-            iconify_icon,
-            html.Span(title, style={"margin-left": "10px"}),
-        ],
-        duration=4000,
-        is_open=True,
-        color=color,
-        style={
-            "position": "fixed",
-            "top": 66,
-            "right": 10,
-            "width": 350,
-            "zIndex": 9999,
-        },
-    )
+    return [
+        dbc.Toast(
+            id="auto-toast",
+            children=[
+                html.Div(
+                    [
+                        iconify_icon,
+                        html.Span(title, style={"margin-left": "10px"}),
+                    ],
+                    className="d-flex align-items-center",
+                ),
+                html.P(message, className="mb-0"),
+            ],
+            duration=4000,
+            is_open=True,
+            color=color,
+            style={
+                "position": "fixed",
+                "top": 66,
+                "right": 10,
+                "width": 350,
+                "zIndex": 9999,
+            },
+        )
+    ]
