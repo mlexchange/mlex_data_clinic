@@ -46,6 +46,7 @@ def sidebar(file_explorer, job_manager):
                                     "placement": "bottom",
                                     "always_visible": True,
                                 },
+                                value=[0, 100],
                             ),
                         ),
                         html.P(),
@@ -55,6 +56,7 @@ def sidebar(file_explorer, job_manager):
                             dbc.Select(
                                 id="mask-dropdown",
                                 options=get_mask_options(),
+                                value="None",
                             ),
                         ),
                     ],
