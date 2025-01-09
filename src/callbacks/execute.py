@@ -194,7 +194,11 @@ def run_train(
     prevent_initial_call=True,
 )
 def update_model_parameters(job_id, current_params):
-    job_parameters = get_flow_run_parameters(job_id)
+    try:
+        job_parameters = get_flow_run_parameters(job_id)
+    except Exception:
+        traceback.print_exc()
+        raise PreventUpdate
     train_parameters = job_parameters["params_list"][0]["params"]
     model_parameters = train_parameters["model_parameters"]
     mlex_components.__init__("dbc")
