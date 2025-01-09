@@ -33,7 +33,7 @@
                 "min": 0,
                 "max": 1,
                 "step": 0.1,
-                "value": 0.5,
+                "value": 0,
                 "marks": {
                     "0": "0",
                     "0.5": "0.5",
@@ -48,7 +48,7 @@
                 "min": 0,
                 "max": 1,
                 "step": 0.1,
-                "value": 0.5,
+                "value": 0,
                 "marks": {
                     "0": "0",
                     "0.5": "0.5",
@@ -60,21 +60,21 @@
                 "name": "brightness",
                 "title": "Brightness Factor",
                 "param_key": "brightness",
-                "value": 1
+                "value": 0
             },
             {
                 "type": "float",
                 "name": "contrast",
                 "title": "Contrast Factor",
                 "param_key": "contrast",
-                "value": 1
+                "value": 0
             },
             {
                 "type": "float",
                 "name": "saturation",
                 "title": "Saturation Factor",
                 "param_key": "saturation",
-                "value": 1
+                "value": 0
             },
             {
                 "type": "slider",
