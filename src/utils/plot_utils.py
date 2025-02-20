@@ -145,3 +145,19 @@ def generate_notification(title, color, icon, message=""):
             },
         )
     ]
+
+
+def plot_empty_scatter():
+    return go.Figure(
+        go.Scattergl(mode="markers"),
+        layout=go.Layout(
+            autosize=True,
+            margin=go.layout.Margin(
+                l=20,
+                r=20,
+                b=20,
+                t=20,
+                pad=0,
+            ),
+        ),
+    )

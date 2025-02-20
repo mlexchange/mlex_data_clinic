@@ -1,6 +1,8 @@
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
+from src.utils.plot_utils import plot_empty_scatter
+
 
 def main_display(loss_plot):
     """
@@ -121,6 +123,22 @@ def main_display(loss_plot):
                         },
                     ),
                     dbc.CardFooter(id="data-size-out"),
+                ],
+            ),
+            dbc.Card(
+                id="latent-space-card",
+                style={"width": "100%"},
+                children=[
+                    dbc.CardHeader(
+                        "Latent Space Visualization", className="card-title"
+                    ),
+                    dbc.CardBody(
+                        dcc.Graph(
+                            id="latent-space-viz",
+                            figure=plot_empty_scatter(),
+                            style={"width": "98%", "height": "30vh"},
+                        )
+                    ),
                 ],
             ),
             html.Div(loss_plot),
