@@ -11,6 +11,7 @@ from file_manager.main import FileManager
 from mlex_utils.dash_utils.mlex_components import MLExComponents
 
 from src.components.header import header
+from src.components.infrastructure import create_infra_state_affix
 from src.components.main_display import main_display
 from src.components.sidebar import sidebar
 from src.components.training_stats import training_stats_plot
@@ -87,17 +88,11 @@ app.layout = html.Div(
         ),
         dbc.Container(
             [
-                dbc.Row(
-                    [
-                        dbc.Col(
-                            sidebar(file_explorer, job_manager),
-                            style={"flex": "0 0 500px"},
-                        ),
-                        dbc.Col(main_display(training_stats_plot())),
-                        html.Div(id="dummy-output"),
-                    ]
-                ),
+                sidebar(file_explorer, job_manager),
+                main_display(training_stats_plot()),
+                html.Div(id="dummy-output"),
                 dcc.Store(id="current-target-size", data=[0, 0]),
+                create_infra_state_affix(),
             ],
             fluid=True,
         ),
