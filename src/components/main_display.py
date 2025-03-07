@@ -11,7 +11,9 @@ def main_display(loss_plot):
         loss_plot:          Loss plot of trainin process
     """
     main_display = html.Div(
-        [
+        id="main-display",
+        style={"padding": "0px 10px 0px 510px"},
+        children=[
             dbc.Card(
                 id="inter_graph",
                 style={"width": "100%"},
@@ -143,6 +145,6 @@ def main_display(loss_plot):
             ),
             html.Div(loss_plot),
             dcc.Interval(id="interval", interval=5 * 1000, n_intervals=0),
-        ]
+        ],
     )
     return main_display

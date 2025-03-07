@@ -1,13 +1,18 @@
 import numpy as np
-from dash import ALL, Input, Output, State, callback
+from dash import ALL, Input, Output, State, callback, no_update
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 from mlex_utils.prefect_utils.core import get_children_flow_run_ids
 from PIL import Image
 
-from src.app_layout import TILED_KEY, USER
+from src.app_layout import DATA_TILED_KEY, USER
 from src.utils.data_utils import hash_list_of_strings, tiled_results
-from src.utils.plot_utils import get_bottleneck, plot_figure
+from src.utils.plot_utils import (
+    generate_scatter_data,
+    get_bottleneck,
+    plot_empty_scatter,
+    plot_figure,
+)
 
 
 @callback(
@@ -87,7 +92,7 @@ def update_slider_boundaries_new_dataset(
         img-slider:         Slider index
     """
     if data_project_dict != {}:
-        data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
+        data_project = DataProject.from_dict(data_project_dict, api_key=DATA_TILED_KEY)
         if len(data_project.datasets) > 0:
             max_ind = data_project.datasets[-1].cumulative_data_count - 1
         else:
@@ -128,7 +133,7 @@ def refresh_image(
         data_size:          Data size
     """
     if data_project_dict != {}:
-        data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
+        data_project = DataProject.from_dict(data_project_dict, api_key=DATA_TILED_KEY)
         if (
             len(data_project.datasets) > 0
             and data_project.datasets[-1].cumulative_data_count > 0
@@ -177,7 +182,7 @@ def update_project_name(data_project_dict):
     Input("show-reconstructions", "value"),
     Input("img-slider", "value"),
     Input("current-target-size", "data"),
-    State(
+    Input(
         {
             "component": "DbcJobManagerAIO",
             "subcomponent": "train-dropdown",
@@ -219,48 +224,64 @@ def refresh_reconstruction(show_recons, img_ind, target_size, job_id, project_na
 
 
 @callback(
-    Output("warning-modal", "is_open"),
-    Output("warning-msg", "children"),
-    Input("warning-cause", "data"),
-    State("warning-modal", "is_open"),
-    prevent_initial_call=True,
+    Output("latent-space-viz", "figure"),
+    Input("show-reconstructions", "value"),
+    Input(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "train-dropdown",
+            "aio_id": "data-clinic-jobs",
+        },
+        "value",
+    ),
+    State(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "project-name-id",
+            "aio_id": "data-clinic-jobs",
+        },
+        "data",
+    ),
 )
-def open_warning_modal(warning_cause, is_open):
+def show_feature_vectors(show_feature_vectors, job_id, project_name):
     """
-    This callback toggles a warning/error message
+    This callback displays the latent space according to the selected job
     Args:
-        warning_cause:      Cause that triggered the warning
-        is_open:            Close/open state of the warning
+        show_feature_vectors:   Show feature vectors
+        job_id:                 Selected job
+        project_name:           Data project name
     Returns:
-        is_open:            Close/open state of the warning
-         warning_msg:       Warning message
+        scatter:                Scatter plot with feature vectors
     """
-    if warning_cause == "wrong_dataset":
-        return not is_open, "The dataset you have selected is not supported."
-    elif warning_cause == "no_row_selected":
-        return not is_open, "Please select a trained model from the List of Jobs"
-    elif warning_cause == "no_dataset":
-        return not is_open, "Please upload the dataset before submitting the job."
-    elif warning_cause == "data_project_not_ready":
-        return (
-            not is_open,
-            "The data project is still being created. Please try again in a couple minutes.",
-        )
-    else:
-        return False, ""
+    if show_feature_vectors:
+        return no_update
+
+    elif show_feature_vectors is False:
+        return plot_empty_scatter()
+
+    child_job_id = get_children_flow_run_ids(job_id)[-1]
+    expected_result_uri = f"{USER}/{project_name}/{child_job_id}"
+    latent_vectors = (
+        tiled_results.get_data_by_trimmed_uri(expected_result_uri).read().to_numpy()
+    )
+    metadata = tiled_results.get_data_by_trimmed_uri(expected_result_uri).metadata
+
+    scatter_data = generate_scatter_data(
+        latent_vectors, metadata["model_parameters"]["n_components"]
+    )
+    return scatter_data
 
 
 @callback(
-    Output("warning-modal", "is_open", allow_duplicate=True),
-    Input("ok-button", "n_clicks"),
+    Output("sidebar-offcanvas", "is_open", allow_duplicate=True),
+    Output("main-display", "style"),
+    Input("sidebar-view", "n_clicks"),
+    State("sidebar-offcanvas", "is_open"),
     prevent_initial_call=True,
 )
-def close_warning_modal(ok_n_clicks):
-    """
-    This callback closes warning/error message
-    Args:
-        ok_n_clicks:        Close the warning
-    Returns:
-        is_open:            Close/open state of the warning
-    """
-    return False
+def toggle_sidebar(n_clicks, is_open):
+    if is_open:
+        style = {}
+    else:
+        style = {"padding": "0px 10px 0px 510px", "width": "100%"}
+    return not is_open, style

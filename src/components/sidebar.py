@@ -1,5 +1,6 @@
 import dash_bootstrap_components as dbc
 from dash import dcc, html
+from dash_iconify import DashIconify
 from mlex_utils.dash_utils.components_bootstrap.component_utils import (
     DbcControlItem as ControlItem,
 )
@@ -14,92 +15,114 @@ def sidebar(file_explorer, job_manager):
         file_explorer:      Dash file explorer
         job_manager:        Job manager object
     """
-    sidebar = [
-        dbc.Accordion(
-            id="sidebar",
-            children=[
-                dbc.AccordionItem(
-                    title="Data selection",
-                    children=file_explorer,
-                ),
-                dbc.AccordionItem(
-                    title="Data transformation",
+    sidebar = html.Div(
+        [
+            dbc.Offcanvas(
+                id="sidebar-offcanvas",
+                is_open=True,
+                backdrop=False,
+                scrollable=True,
+                style={
+                    "padding": "80px 0px 0px 0px",
+                    "width": "500px",
+                },  # Avoids being covered by the navbar
+                title="Controls",
+                children=dbc.Accordion(
+                    id="sidebar",
+                    always_open=True,
                     children=[
-                        ControlItem(
-                            "",
-                            "empty-title-log-transform",
-                            dbc.Switch(
-                                id="log-transform",
-                                value=False,
-                                label="Log Transform",
-                            ),
+                        dbc.AccordionItem(
+                            title="Data selection",
+                            children=file_explorer,
                         ),
-                        html.P(),
-                        ControlItem(
-                            "Min-Max Percentile",
-                            "min-max-percentile-title",
-                            dcc.RangeSlider(
-                                id="min-max-percentile",
-                                min=0,
-                                max=100,
-                                tooltip={
-                                    "placement": "bottom",
-                                    "always_visible": True,
-                                },
-                                value=[0, 100],
-                            ),
+                        dbc.AccordionItem(
+                            title="Data transformation",
+                            children=[
+                                ControlItem(
+                                    "",
+                                    "empty-title-log-transform",
+                                    dbc.Switch(
+                                        id="log-transform",
+                                        value=False,
+                                        label="Log Transform",
+                                    ),
+                                ),
+                                html.P(),
+                                ControlItem(
+                                    "Min-Max Percentile",
+                                    "min-max-percentile-title",
+                                    dcc.RangeSlider(
+                                        id="min-max-percentile",
+                                        min=0,
+                                        max=100,
+                                        tooltip={
+                                            "placement": "bottom",
+                                            "always_visible": True,
+                                        },
+                                        value=[0, 100],
+                                    ),
+                                ),
+                                html.P(),
+                                ControlItem(
+                                    "Mask Selection",
+                                    "mask-dropdown-title",
+                                    dbc.Select(
+                                        id="mask-dropdown",
+                                        options=get_mask_options(),
+                                        value="None",
+                                    ),
+                                ),
+                            ],
                         ),
-                        html.P(),
-                        ControlItem(
-                            "Mask Selection",
-                            "mask-dropdown-title",
-                            dbc.Select(
-                                id="mask-dropdown",
-                                options=get_mask_options(),
-                                value="None",
-                            ),
+                        # TODO: Rename show-reconstructions to show-results
+                        dbc.AccordionItem(
+                            children=[
+                                job_manager,
+                                ControlItem(
+                                    "",
+                                    "empty-title-recons",
+                                    dbc.Switch(
+                                        id="show-reconstructions",
+                                        value=False,
+                                        label="Show Reconstructions",
+                                        disabled=True,
+                                    ),
+                                ),
+                            ],
+                            title="Model Configuration",
                         ),
                     ],
+                    style={"overflow-y": "scroll", "height": "90vh"},
                 ),
-                dbc.AccordionItem(
-                    children=[
-                        job_manager,
-                        ControlItem(
-                            "",
-                            "empty-title-recons",
-                            dbc.Switch(
-                                id="show-reconstructions",
-                                value=False,
-                                label="Show Reconstructions",
-                                disabled=True,
-                            ),
-                        ),
-                    ],
-                    title="Model Configuration",
-                ),
-            ],
-            style={"overflow-y": "scroll", "height": "90vh"},
-        ),
-        dbc.Modal(
-            [
-                dbc.ModalHeader("Warning"),
-                dbc.ModalBody(id="warning-msg"),
-                dbc.ModalFooter(
-                    [
-                        dbc.Button(
-                            "OK",
-                            id="ok-button",
-                            color="danger",
-                            outline=False,
-                            className="ms-auto",
-                            n_clicks=0,
-                        ),
-                    ]
-                ),
-            ],
-            id="warning-modal",
-            is_open=False,
-        ),
-        dcc.Store(id="warning-cause", data=""),
-    ]
+            ),
+            create_show_sidebar_affix(),
+        ]
+    )
     return sidebar
+
+
+def create_show_sidebar_affix():
+    return html.Div(
+        [
+            dbc.Button(
+                DashIconify(icon="circum:settings", width=20),
+                id="sidebar-view",
+                size="sm",
+                color="secondary",
+                className="rounded-circle",
+                style={"aspectRatio": "1 / 1"},
+            ),
+            dbc.Tooltip(
+                "Toggle sidebar",
+                target="sidebar-view",
+                placement="top",
+            ),
+        ],
+        style={
+            "position": "fixed",
+            "bottom": "60px",
+            "right": "10px",
+            "zIndex": 9999,  # Note: zIndex is unitless
+            "opacity": "0.8",
+        },
+    )

@@ -1,6 +1,7 @@
 import base64
 
 import dash_bootstrap_components as dbc
+import numpy as np
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
@@ -161,3 +162,83 @@ def plot_empty_scatter():
             ),
         ),
     )
+
+
+def generate_scatter_data(latent_vectors):
+    """
+    Generate latent vectors plot
+    """
+    vals_names = {}
+    vals = [-1 for i in range(latent_vectors.shape[0])]
+    vals_names = {a: a for a in np.unique(vals).astype(int)}
+
+    scatter_data = generate_scattergl_plot(
+        latent_vectors[:, 0], latent_vectors[:, 1], vals, vals_names
+    )
+
+    fig = go.Figure(scatter_data)
+    fig.update_layout(
+        margin=go.layout.Margin(l=20, r=20, b=20, t=20, pad=0),
+        legend=dict(tracegroupgap=20),
+    )
+    return fig
+
+
+def generate_scattergl_plot(
+    x_coords,
+    y_coords,
+    labels,
+    label_to_string_map,
+    show_legend=False,
+    custom_indices=None,
+):
+    """
+    Generates a multi-trace Scattergl plot with one trace per label,
+    preserving the exact i-th ordering across all data.
+
+    Each trace is the same length as x_coords/y_coords, but for points
+    not belonging to that trace's label, we insert None. This ensures:
+      - i-th point in the figure is i-th data row (helpful for selectedData).
+      - Each label gets its own legend entry.
+    """
+
+    if custom_indices is None:
+        custom_indices = list(range(len(x_coords)))
+
+    # Gather unique labels in order of first appearance
+    unique_labels = []
+    for lbl in labels:
+        if lbl not in unique_labels:
+            unique_labels.append(lbl)
+
+    traces = []
+    for label in unique_labels:
+        # Initialize the entire length with None
+        trace_x = [None] * len(x_coords)
+        trace_y = [None] * len(y_coords)
+        trace_custom = [None] * len(x_coords)
+
+        # Fill in data only where labels match
+        for i, lbl in enumerate(labels):
+            if lbl == label:
+                trace_x[i] = x_coords[i]
+                trace_y[i] = y_coords[i]
+                trace_custom[i] = custom_indices[i]
+
+        # Convert custom_indices to a 2D array if needed by Plotly
+        trace_custom = np.array(trace_custom).reshape(-1, 1)
+
+        traces.append(
+            go.Scattergl(
+                x=trace_x,
+                y=trace_y,
+                mode="markers",
+                name=str(label_to_string_map[label]),
+                customdata=trace_custom,
+            )
+        )
+
+    fig = go.Figure(data=traces)
+    if not show_legend:
+        fig.update_layout(showlegend=False)
+    return fig

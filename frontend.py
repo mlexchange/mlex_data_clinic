@@ -4,16 +4,19 @@ from uuid import uuid4
 from dash import MATCH, Input, Output, html
 from dotenv import load_dotenv
 
-from src.app_layout import DATA_DIR, app, mlex_components, models
+from src.app_layout import DATA_DIR, app, latent_space_models, mlex_components
 from src.callbacks.display import (  # noqa: F401
-    close_warning_modal,
-    open_warning_modal,
     refresh_bottleneck,
     refresh_image,
     refresh_reconstruction,
+    toggle_sidebar,
     update_slider_boundaries_new_dataset,
 )
 from src.callbacks.execute import run_train  # noqa: F401
+from src.callbacks.infrastructure_check import (  # noqa: F401
+    check_infra_state,
+    update_infra_state,
+)
 
 load_dotenv(".env")
 
@@ -43,7 +46,7 @@ server = app.server
     ),
 )
 def update_model_parameters(model_name):
-    model = models[model_name]
+    model = latent_space_models[model_name]
     if model["gui_parameters"]:
         item_list = mlex_components.get_parameter_items(
             _id={"type": str(uuid4())}, json_blob=model["gui_parameters"]
