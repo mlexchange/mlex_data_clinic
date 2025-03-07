@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 
@@ -24,12 +25,12 @@ DATA_DIR = os.getenv("DATA_DIR", "data")
 SPLASH_URL = os.getenv("SPLASH_URL")
 DEFAULT_TILED_URI = os.getenv("DEFAULT_TILED_URI")
 DEFAULT_TILED_SUB_URI = os.getenv("DEFAULT_TILED_SUB_URI")
-TILED_KEY = os.getenv("TILED_KEY")
-if TILED_KEY == "":
-    TILED_KEY = None
+DATA_TILED_KEY = os.getenv("DATA_TILED_KEY")
+if DATA_TILED_KEY == "":
+    DATA_TILED_KEY = None
 MODELFILE_PATH = os.getenv("MODELFILE_PATH", "./examples/assets/models.json")
 MODE = os.getenv("MODE", "dev")
-PREFECT_TAGS = os.getenv("PREFECT_TAGS", ["data-clinic"])
+PREFECT_TAGS = json.loads(os.getenv("PREFECT_TAGS", '["data-clinic"]'))
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -56,7 +57,7 @@ app._favicon = "mlex.ico"
 dash_file_explorer = FileManager(
     DATA_DIR,
     open_explorer=False,
-    api_key=TILED_KEY,
+    api_key=DATA_TILED_KEY,
     logger=logger,
 )
 dash_file_explorer.init_callbacks(app)

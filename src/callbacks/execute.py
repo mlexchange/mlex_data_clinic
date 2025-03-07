@@ -1,3 +1,4 @@
+import json
 import os
 import traceback
 import uuid
@@ -32,7 +33,7 @@ from src.utils.plot_utils import generate_notification
 MODE = os.getenv("MODE", "")
 TIMEZONE = os.getenv("TIMEZONE", "US/Pacific")
 FLOW_NAME = os.getenv("FLOW_NAME", "")
-PREFECT_TAGS = os.getenv("PREFECT_TAGS", ["data-clinic"])
+PREFECT_TAGS = json.loads(os.getenv("PREFECT_TAGS", '["data-clinic"]'))
 RESULTS_DIR = os.getenv("RESULTS_DIR", "")
 FLOW_TYPE = os.getenv("FLOW_TYPE", "conda")
 

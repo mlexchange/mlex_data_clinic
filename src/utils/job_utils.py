@@ -1,66 +1,24 @@
+import json
 import os
 from urllib.parse import urljoin
 
-RESULTS_DIR = os.getenv("RESULTS_DIR", "")
+# I/O parameters for job execution
+READ_DIR_MOUNT = os.getenv("READ_DIR_MOUNT", None)
+WRITE_DIR_MOUNT = os.getenv("WRITE_DIR_MOUNT", None)
+WRITE_DIR = os.getenv("WRITE_DIR", "")
 RESULTS_TILED_URI = os.getenv("RESULTS_TILED_URI", "")
 RESULTS_TILED_API_KEY = os.getenv("RESULTS_TILED_API_KEY", "")
-CONDA_ENV_NAME = os.getenv("CONDA_ENV_NAME", "mlex_pytorch_autoencoders")
-TRAIN_SCRIPT_PATH = os.getenv("TRAIN_SCRIPT_PATH", "scr/train_model.py")
-TUNE_SCRIPT_PATH = os.getenv("TUNE_SCRIPT_PATH", "scr/tune_model.py")
-INFERENCE_SCRIPT_PATH = os.getenv("INFERENCE_SCRIPT_PATH", "scr/predict_model.py")
 
-TRAIN_PARAMS_EXAMPLE = {
-    "flow_type": "conda",
-    "params_list": [
-        {
-            "conda_env_name": f"{CONDA_ENV_NAME}",
-            "python_file_name": f"{TRAIN_SCRIPT_PATH}",
-            "params": {
-                "io_parameters": {"uid_save": "uid0001", "uid_retrieve": "uid0001"}
-            },
-        },
-        {
-            "conda_env_name": f"{CONDA_ENV_NAME}",
-            "python_file_name": f"{INFERENCE_SCRIPT_PATH}",
-            "params": {
-                "io_parameters": {"uid_save": "uid0001", "uid_retrieve": "uid0001"}
-            },
-        },
-    ],
-}
-
-TUNE_PARAMS_EXAMPLE = {
-    "flow_type": "conda",
-    "params_list": [
-        {
-            "conda_env_name": f"{CONDA_ENV_NAME}",
-            "python_file_name": f"{TUNE_SCRIPT_PATH}",
-            "params": {
-                "io_parameters": {"uid_save": "uid0001", "uid_retrieve": "uid0001"}
-            },
-        },
-        {
-            "conda_env_name": f"{CONDA_ENV_NAME}",
-            "python_file_name": f"{INFERENCE_SCRIPT_PATH}",
-            "params": {
-                "io_parameters": {"uid_save": "uid0001", "uid_retrieve": "uid0001"}
-            },
-        },
-    ],
-}
-
-INFERENCE_PARAMS_EXAMPLE = {
-    "flow_type": "conda",
-    "params_list": [
-        {
-            "conda_env_name": f"{CONDA_ENV_NAME}",
-            "python_file_name": f"{INFERENCE_SCRIPT_PATH}",
-            "params": {
-                "io_parameters": {"uid_save": "uid0001", "uid_retrieve": "uid0001"}
-            },
-        },
-    ],
-}
+# Flow parameters
+PARTITIONS_CPU = json.loads(os.getenv("PARTITIONS_CPU", "[]"))
+RESERVATIONS_CPU = json.loads(os.getenv("RESERVATIONS_CPU", "[]"))
+MAX_TIME_CPU = os.getenv("MAX_TIME_CPU", "1:00:00")
+PARTITIONS_GPU = json.loads(os.getenv("PARTITIONS_CPU", "[]"))
+RESERVATIONS_GPU = json.loads(os.getenv("RESERVATIONS_CPU", "[]"))
+MAX_TIME_GPU = os.getenv("MAX_TIME_CPU", "1:00:00")
+SUBMISSION_SSH_KEY = os.getenv("SUBMISSION_SSH_KEY", "")
+FORWARD_PORTS = json.loads(os.getenv("FORWARD_PORTS", "[]"))
+CONTAINER_NETWORK = os.getenv("CONTAINER_NETWORK", "")
 
 
 def parse_tiled_url(url, user, project_name, tiled_base_path="/api/v1/metadata"):
@@ -76,36 +34,293 @@ def parse_tiled_url(url, user, project_name, tiled_base_path="/api/v1/metadata")
 
 
 def parse_train_job_params(
-    data_project, model_parameters, model_name, user, project_name
+    data_project,
+    model_parameters,
+    user,
+    project_name,
+    flow_type,
+    latent_space_params,
+    dim_reduction_params,
 ):
     """
     Parse training job parameters
     """
     # TODO: Use model_name to define the conda_env/algorithm to be executed
     data_uris = [dataset.uri for dataset in data_project.datasets]
+
+    results_dir = f"{WRITE_DIR}/{user}"
+
     io_parameters = {
         "uid_retrieve": "",
         "data_uris": data_uris,
         "data_tiled_api_key": data_project.api_key,
         "data_type": data_project.data_type,
         "root_uri": data_project.root_uri,
-        "model_dir": f"{RESULTS_DIR}/models",
+        "save_model_path": f"{results_dir}/models",
         "results_tiled_uri": parse_tiled_url(RESULTS_TILED_URI, user, project_name),
         "results_tiled_api_key": RESULTS_TILED_API_KEY,
-        "results_dir": f"{RESULTS_DIR}",
+        "results_dir": f"{results_dir}",
     }
 
-    TRAIN_PARAMS_EXAMPLE["params_list"][0]["params"]["io_parameters"] = io_parameters
-    TRAIN_PARAMS_EXAMPLE["params_list"][1]["params"]["io_parameters"] = io_parameters
+    ls_python_file_name_train = latent_space_params["python_file_name"]["train"]
+    ls_python_file_name_inference = latent_space_params["python_file_name"]["inference"]
+    dm_python_file_name = dim_reduction_params["python_file_name"]
 
-    TRAIN_PARAMS_EXAMPLE["params_list"][0]["params"][
-        "model_parameters"
-    ] = model_parameters
-    TRAIN_PARAMS_EXAMPLE["params_list"][1]["params"][
-        "model_parameters"
-    ] = model_parameters
+    if flow_type == "podman" or "docker":
+        job_params = {
+            "flow_type": flow_type,
+            "params_list": [
+                {
+                    "image_name": latent_space_params["image_name"],
+                    "image_tag": latent_space_params["image_tag"],
+                    "command": f"python {ls_python_file_name_train}",
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": model_parameters,
+                    },
+                    "volumes": [
+                        f"{READ_DIR_MOUNT}:/tiled_storage",
+                    ],
+                    "network": CONTAINER_NETWORK,
+                },
+                {
+                    "image_name": latent_space_params["image_name"],
+                    "image_tag": latent_space_params["image_tag"],
+                    "command": f"python {ls_python_file_name_inference}",
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": {},  # Default parameters
+                    },
+                    "volumes": [
+                        f"{READ_DIR_MOUNT}:/tiled_storage",
+                    ],
+                },
+                {
+                    "image_name": dim_reduction_params["image_name"],
+                    "image_tag": dim_reduction_params["image_tag"],
+                    "command": f"python {dm_python_file_name}",
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": model_parameters,
+                    },
+                    "volumes": [
+                        f"{READ_DIR_MOUNT}:/tiled_storage",
+                    ],
+                },
+            ],
+        }
 
-    return TRAIN_PARAMS_EXAMPLE, project_name
+    elif flow_type == "conda":
+        job_params = {
+            "flow_type": "conda",
+            "params_list": [
+                {
+                    "conda_env_name": latent_space_params["conda_env"],
+                    "python_file_name": ls_python_file_name_train,
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": model_parameters,
+                    },
+                },
+                {
+                    "conda_env_name": latent_space_params["conda_env"],
+                    "python_file_name": ls_python_file_name_inference,
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": model_parameters,
+                    },
+                },
+                {
+                    "conda_env_name": dim_reduction_params["conda_env"],
+                    "python_file_name": dm_python_file_name,
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": {},  # Default parameters
+                    },
+                },
+            ],
+        }
+
+    else:
+        job_params = {
+            "flow_type": "slurm",
+            "params_list": [
+                {
+                    "job_name": "latent_space_explorer",
+                    "num_nodes": 1,
+                    "partitions": PARTITIONS_CPU,
+                    "reservations": RESERVATIONS_CPU,
+                    "max_time": MAX_TIME_CPU,
+                    "conda_env_name": latent_space_params["conda_env"],
+                    "python_file_name": ls_python_file_name_train,
+                    "submission_ssh_key": SUBMISSION_SSH_KEY,
+                    "forward_ports": FORWARD_PORTS,
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": model_parameters,
+                    },
+                },
+                {
+                    "job_name": "latent_space_explorer",
+                    "num_nodes": 1,
+                    "partitions": PARTITIONS_CPU,
+                    "reservations": RESERVATIONS_CPU,
+                    "max_time": MAX_TIME_CPU,
+                    "conda_env_name": latent_space_params["conda_env"],
+                    "python_file_name": ls_python_file_name_inference,
+                    "submission_ssh_key": SUBMISSION_SSH_KEY,
+                    "forward_ports": FORWARD_PORTS,
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": model_parameters,
+                    },
+                },
+                {
+                    "job_name": "latent_space_explorer",
+                    "num_nodes": 1,
+                    "partitions": PARTITIONS_CPU,
+                    "reservations": RESERVATIONS_CPU,
+                    "max_time": MAX_TIME_CPU,
+                    "conda_env_name": dim_reduction_params["conda_env"],
+                    "python_file_name": dm_python_file_name,
+                    "submission_ssh_key": SUBMISSION_SSH_KEY,
+                    "forward_ports": FORWARD_PORTS,
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": {},  # Default parameters
+                    },
+                },
+            ],
+        }
+
+    return job_params
+
+
+def parse_inference_job_params(
+    data_project,
+    model_parameters,
+    user,
+    project_name,
+    flow_type,
+    latent_space_params,
+    dim_reduction_params,
+):
+    """
+    Parse inference job parameters
+    """
+    # TODO: Use model_name to define the conda_env/algorithm to be executed
+    data_uris = [dataset.uri for dataset in data_project.datasets]
+
+    results_dir = f"{WRITE_DIR}/{user}"
+
+    io_parameters = {
+        "uid_retrieve": "",
+        "data_uris": data_uris,
+        "data_tiled_api_key": data_project.api_key,
+        "data_type": data_project.data_type,
+        "root_uri": data_project.root_uri,
+        "save_model_path": f"{results_dir}/models",
+        "results_tiled_uri": parse_tiled_url(RESULTS_TILED_URI, user, project_name),
+        "results_tiled_api_key": RESULTS_TILED_API_KEY,
+        "results_dir": f"{results_dir}",
+    }
+
+    ls_python_file_name_inference = latent_space_params["python_file_name"]["inference"]
+    dm_python_file_name = dim_reduction_params["python_file_name"]
+
+    if flow_type == "podman" or "docker":
+        job_params = {
+            "flow_type": flow_type,
+            "params_list": [
+                {
+                    "image_name": latent_space_params["image_name"],
+                    "image_tag": latent_space_params["image_tag"],
+                    "command": f"python {ls_python_file_name_inference}",
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": {},  # Default parameters
+                    },
+                    "volumes": [
+                        f"{READ_DIR_MOUNT}:/tiled_storage",
+                    ],
+                    "network": CONTAINER_NETWORK,
+                },
+                {
+                    "image_name": dim_reduction_params["image_name"],
+                    "image_tag": dim_reduction_params["image_tag"],
+                    "command": f"python {dm_python_file_name}",
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": model_parameters,
+                    },
+                    "volumes": [
+                        f"{READ_DIR_MOUNT}:/tiled_storage",
+                    ],
+                    "network": CONTAINER_NETWORK,
+                },
+            ],
+        }
+    elif flow_type == "conda":
+        job_params = {
+            "flow_type": "conda",
+            "params_list": [
+                {
+                    "conda_env_name": latent_space_params["conda_env"],
+                    "python_file_name": ls_python_file_name_inference,
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": model_parameters,
+                    },
+                },
+                {
+                    "conda_env_name": dim_reduction_params["conda_env"],
+                    "python_file_name": dm_python_file_name,
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": {},  # Default parameters
+                    },
+                },
+            ],
+        }
+
+    else:
+        job_params = {
+            "flow_type": "slurm",
+            "params_list": [
+                {
+                    "job_name": "latent_space_explorer",
+                    "num_nodes": 1,
+                    "partitions": PARTITIONS_CPU,
+                    "reservations": RESERVATIONS_CPU,
+                    "max_time": MAX_TIME_CPU,
+                    "conda_env_name": latent_space_params["conda_env"],
+                    "python_file_name": ls_python_file_name_inference,
+                    "submission_ssh_key": SUBMISSION_SSH_KEY,
+                    "forward_ports": FORWARD_PORTS,
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": model_parameters,
+                    },
+                },
+                {
+                    "job_name": "latent_space_explorer",
+                    "num_nodes": 1,
+                    "partitions": PARTITIONS_CPU,
+                    "reservations": RESERVATIONS_CPU,
+                    "max_time": MAX_TIME_CPU,
+                    "conda_env_name": dim_reduction_params["conda_env"],
+                    "python_file_name": dm_python_file_name,
+                    "submission_ssh_key": SUBMISSION_SSH_KEY,
+                    "forward_ports": FORWARD_PORTS,
+                    "params": {
+                        "io_parameters": io_parameters,
+                        "model_parameters": {},  # Default parameters
+                    },
+                },
+            ],
+        }
+
+    return job_params
 
 
 def parse_model_params(model_parameters_html, log, percentiles, mask):
@@ -136,34 +351,3 @@ def parse_model_params(model_parameters_html, log, percentiles, mask):
     input_params["percentiles"] = percentiles
     input_params["mask"] = mask if mask != "None" else None
     return input_params, errors
-
-
-def parse_inference_job_params(
-    data_project, model_parameters, model_name, user, project_name
-):
-    """
-    Parse training job parameters
-    """
-    # TODO: Use model_name to define the conda_env/algorithm to be executed
-    data_uris = [dataset.uri for dataset in data_project.datasets]
-    io_parameters = {
-        "uid_retrieve": "",
-        "data_uris": data_uris,
-        "data_tiled_api_key": data_project.api_key,
-        "data_type": data_project.data_type,
-        "root_uri": data_project.root_uri,
-        "model_dir": f"{RESULTS_DIR}/models",
-        "results_tiled_uri": parse_tiled_url(RESULTS_TILED_URI, user, project_name),
-        "results_tiled_api_key": RESULTS_TILED_API_KEY,
-        "results_dir": f"{RESULTS_DIR}",
-    }
-
-    INFERENCE_PARAMS_EXAMPLE["params_list"][0]["params"][
-        "io_parameters"
-    ] = io_parameters
-
-    INFERENCE_PARAMS_EXAMPLE["params_list"][0]["params"][
-        "model_parameters"
-    ] = model_parameters
-
-    return INFERENCE_PARAMS_EXAMPLE, project_name
