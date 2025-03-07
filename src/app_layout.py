@@ -62,12 +62,18 @@ dash_file_explorer.init_callbacks(app)
 file_explorer = dash_file_explorer.file_explorer
 
 # GET MODELS
-models = Models(modelfile_path="./src/assets/default_models.json")
+latent_space_models = Models(
+    modelfile_path="./src/assets/default_models.json",
+    model_type="latent_space_extraction",
+)
+dim_reduction_models = Models(
+    modelfile_path="./src/assets/default_models.json", model_type="dimension_reduction"
+)
 
 # SETUP MLEx COMPONENTS
 mlex_components = MLExComponents("dbc")
 job_manager = mlex_components.get_job_manager(
-    model_list=models.modelname_list,
+    model_list=latent_space_models.modelname_list,
     mode=MODE,
     aio_id="data-clinic-jobs",
     prefect_tags=PREFECT_TAGS,

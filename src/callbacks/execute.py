@@ -15,7 +15,12 @@ from mlex_utils.prefect_utils.core import (
     schedule_prefect_flow,
 )
 
-from src.app_layout import USER, mlex_components
+from src.app_layout import (
+    USER,
+    dim_reduction_models,
+    latent_space_models,
+    mlex_components,
+)
 from src.utils.data_utils import tiled_results
 from src.utils.job_utils import (
     parse_inference_job_params,
@@ -29,6 +34,7 @@ TIMEZONE = os.getenv("TIMEZONE", "US/Pacific")
 FLOW_NAME = os.getenv("FLOW_NAME", "")
 PREFECT_TAGS = os.getenv("PREFECT_TAGS", ["data-clinic"])
 RESULTS_DIR = os.getenv("RESULTS_DIR", "")
+FLOW_TYPE = os.getenv("FLOW_TYPE", "conda")
 
 
 @callback(
@@ -124,8 +130,19 @@ def run_train(
             return notification
 
         data_project = DataProject.from_dict(data_project_dict)
-        train_params, project_name = parse_train_job_params(
-            data_project, model_parameters, model_name, USER, project_name
+
+        latent_space_params = latent_space_models[model_name]
+        dim_reduction_params = dim_reduction_models[
+            dim_reduction_models.modelname_list[0]
+        ]
+        train_params = parse_train_job_params(
+            data_project,
+            model_parameters,
+            USER,
+            project_name,
+            FLOW_TYPE,
+            latent_space_params,
+            dim_reduction_params,
         )
 
         if MODE == "dev":
