@@ -34,7 +34,7 @@ MODE = os.getenv("MODE", "")
 TIMEZONE = os.getenv("TIMEZONE", "US/Pacific")
 FLOW_NAME = os.getenv("FLOW_NAME", "")
 PREFECT_TAGS = json.loads(os.getenv("PREFECT_TAGS", '["data-clinic"]'))
-RESULTS_DIR = os.getenv("RESULTS_DIR", "")
+WRITE_DIR = os.getenv("WRITE_DIR", "")
 FLOW_TYPE = os.getenv("FLOW_TYPE", "conda")
 
 
@@ -257,7 +257,7 @@ def allow_show_reconstructions(job_id, project_name):
     children_job_ids = get_children_flow_run_ids(job_id)
 
     if (
-        len(children_job_ids) != 2
+        len(children_job_ids) != 3
         or get_flow_run_state(children_job_ids[1]) != "COMPLETED"
     ):
         return True
@@ -302,7 +302,8 @@ def allow_show_stats(job_id):
     child_job_id = children_job_ids[0]  # training job
 
     # Check if the report file exists
-    expected_report_path = f"{RESULTS_DIR}/models/{child_job_id}/report.html"
+    expected_report_path = f"{WRITE_DIR}/{USER}/models/{child_job_id}/report.html"
+    print(expected_report_path, flush=True)
     if os.path.exists(expected_report_path):
         return False
     else:
@@ -335,7 +336,8 @@ def show_training_stats(show_stats_n_clicks, job_id):
 
         children_job_ids = get_children_flow_run_ids(job_id)
         child_job_id = children_job_ids[0]
-        expected_report_path = f"{RESULTS_DIR}/models/{child_job_id}/report.html"
+        expected_report_path = f"{WRITE_DIR}/{USER}/models/{child_job_id}/report.html"
+        print(expected_report_path, flush=True)
 
         with open(expected_report_path, "r") as f:
             report_html = f.read()

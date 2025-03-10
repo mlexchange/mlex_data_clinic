@@ -21,7 +21,7 @@ from src.utils.model_utils import Models
 load_dotenv(".env")
 
 USER = os.getenv("USER", "admin")
-DATA_DIR = os.getenv("DATA_DIR", "data")
+READ_DIR = os.getenv("READ_DIR", "data")
 SPLASH_URL = os.getenv("SPLASH_URL")
 DEFAULT_TILED_URI = os.getenv("DEFAULT_TILED_URI")
 DEFAULT_TILED_SUB_URI = os.getenv("DEFAULT_TILED_SUB_URI")
@@ -55,7 +55,7 @@ app._favicon = "mlex.ico"
 
 # SETUP FILE MANAGER
 dash_file_explorer = FileManager(
-    DATA_DIR,
+    READ_DIR,
     open_explorer=False,
     api_key=DATA_TILED_KEY,
     logger=logger,

@@ -4,7 +4,7 @@ from uuid import uuid4
 from dash import MATCH, Input, Output, html
 from dotenv import load_dotenv
 
-from src.app_layout import DATA_DIR, app, latent_space_models, mlex_components
+from src.app_layout import app, latent_space_models, mlex_components
 from src.callbacks.display import (  # noqa: F401
     refresh_bottleneck,
     refresh_image,
@@ -22,7 +22,6 @@ load_dotenv(".env")
 
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
 APP_PORT = os.getenv("APP_PORT", "8072")
-DIR_MOUNT = os.getenv("DIR_MOUNT", DATA_DIR)
 
 server = app.server
 
