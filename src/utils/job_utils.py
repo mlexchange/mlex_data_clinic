@@ -56,7 +56,7 @@ def parse_train_job_params(
         "data_tiled_api_key": data_project.api_key,
         "data_type": data_project.data_type,
         "root_uri": data_project.root_uri,
-        "save_model_path": f"{results_dir}/models",
+        "models_dir": f"{results_dir}/models",
         "results_tiled_uri": parse_tiled_url(RESULTS_TILED_URI, user, project_name),
         "results_tiled_api_key": RESULTS_TILED_API_KEY,
         "results_dir": f"{results_dir}",
@@ -89,11 +89,12 @@ def parse_train_job_params(
                     "command": f"python {ls_python_file_name_inference}",
                     "params": {
                         "io_parameters": io_parameters,
-                        "model_parameters": {},  # Default parameters
+                        "model_parameters": model_parameters,
                     },
                     "volumes": [
                         f"{READ_DIR_MOUNT}:/tiled_storage",
                     ],
+                    "network": CONTAINER_NETWORK,
                 },
                 {
                     "image_name": dim_reduction_params["image_name"],
@@ -101,11 +102,16 @@ def parse_train_job_params(
                     "command": f"python {dm_python_file_name}",
                     "params": {
                         "io_parameters": io_parameters,
-                        "model_parameters": model_parameters,
+                        "model_parameters": {
+                            "n_components": 2,
+                            "min_dist": 0.1,
+                            "n_neighbors": 5,
+                        },
                     },
                     "volumes": [
                         f"{READ_DIR_MOUNT}:/tiled_storage",
                     ],
+                    "network": CONTAINER_NETWORK,
                 },
             ],
         }

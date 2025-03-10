@@ -1,5 +1,5 @@
 import numpy as np
-from dash import ALL, Input, Output, State, callback, no_update
+from dash import ALL, Input, Output, State, callback
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 from mlex_utils.prefect_utils.core import get_children_flow_run_ids
@@ -226,7 +226,7 @@ def refresh_reconstruction(show_recons, img_ind, target_size, job_id, project_na
 @callback(
     Output("latent-space-viz", "figure"),
     Input("show-reconstructions", "value"),
-    Input(
+    State(
         {
             "component": "DbcJobManagerAIO",
             "subcomponent": "train-dropdown",
@@ -253,10 +253,7 @@ def show_feature_vectors(show_feature_vectors, job_id, project_name):
     Returns:
         scatter:                Scatter plot with feature vectors
     """
-    if show_feature_vectors:
-        return no_update
-
-    elif show_feature_vectors is False:
+    if show_feature_vectors is False:
         return plot_empty_scatter()
 
     child_job_id = get_children_flow_run_ids(job_id)[-1]
@@ -264,11 +261,8 @@ def show_feature_vectors(show_feature_vectors, job_id, project_name):
     latent_vectors = (
         tiled_results.get_data_by_trimmed_uri(expected_result_uri).read().to_numpy()
     )
-    metadata = tiled_results.get_data_by_trimmed_uri(expected_result_uri).metadata
 
-    scatter_data = generate_scatter_data(
-        latent_vectors, metadata["model_parameters"]["n_components"]
-    )
+    scatter_data = generate_scatter_data(latent_vectors)
     return scatter_data
 
 
