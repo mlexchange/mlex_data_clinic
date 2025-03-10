@@ -360,9 +360,9 @@
             }
         ],
         "python_file_name": {
-            "train": "src/train_model.py",
-            "inference": "src/predict_model.py",
-            "tune": "src/tune_model.py"
+            "train": "src/train.py",
+            "inference": "src/inference.py",
+            "tune": "src/tune.py"
         },
         "public": false
         },
