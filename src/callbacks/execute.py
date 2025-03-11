@@ -447,8 +447,18 @@ def run_inference(
             return notification
 
         data_project = DataProject.from_dict(data_project_dict)
-        inference_params, project_name = parse_inference_job_params(
-            data_project, model_parameters, model_name, USER, project_name
+        latent_space_params = latent_space_models[model_name]
+        dim_reduction_params = dim_reduction_models[
+            dim_reduction_models.modelname_list[0]
+        ]
+        inference_params = parse_inference_job_params(
+            data_project,
+            model_parameters,
+            USER,
+            project_name,
+            FLOW_TYPE,
+            latent_space_params,
+            dim_reduction_params,
         )
 
         if MODE == "dev":
@@ -465,9 +475,11 @@ def run_inference(
                 job_name = get_flow_run_name(train_job_id)
                 children_flows = get_children_flow_run_ids(train_job_id)
                 train_job_id = children_flows[0]
+                print(inference_params, flush=True)
                 inference_params["params_list"][0]["params"]["io_parameters"][
                     "uid_retrieve"
                 ] = train_job_id
+                print(inference_params, flush=True)
                 try:
                     # Prepare tiled
                     tiled_results.prepare_project_container(USER, project_name)
