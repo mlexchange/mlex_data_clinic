@@ -16,18 +16,18 @@ class TiledDataLoader:
     def __init__(self, data_tiled_uri, data_tiled_api_key):
         self.data_tiled_uri = data_tiled_uri
         self.data_tiled_api_key = data_tiled_api_key
-        self.data_client = from_uri(
-            self.data_tiled_uri,
-            api_key=self.data_tiled_api_key,
-            timeout=httpx.Timeout(30.0),
-        )
+        self.refresh_data_client()
 
     def refresh_data_client(self):
-        self.data_client = from_uri(
-            self.data_tiled_uri,
-            api_key=self.data_tiled_api_key,
-            timeout=httpx.Timeout(30.0),
-        )
+        try:
+            self.data_client = from_uri(
+                self.data_tiled_uri,
+                api_key=self.data_tiled_api_key,
+                timeout=httpx.Timeout(30.0),
+            )
+        except Exception as e:
+            logger.warning(f"Error connecting to Tiled: {e}")
+            self.data_client = None
 
     def check_dataloader_ready(self):
         """
