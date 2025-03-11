@@ -475,11 +475,10 @@ def run_inference(
                 job_name = get_flow_run_name(train_job_id)
                 children_flows = get_children_flow_run_ids(train_job_id)
                 train_job_id = children_flows[0]
-                print(inference_params, flush=True)
                 inference_params["params_list"][0]["params"]["io_parameters"][
                     "uid_retrieve"
                 ] = train_job_id
-                print(inference_params, flush=True)
+
                 try:
                     # Prepare tiled
                     tiled_results.prepare_project_container(USER, project_name)
