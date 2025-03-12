@@ -1,50 +1,56 @@
 import dash_bootstrap_components as dbc
-from dash import dcc
+from dash import dcc, html
+from dash_iconify import DashIconify
+from mlex_utils.dash_utils.components_bootstrap.component_utils import (
+    DbcControlItem as ControlItem,
+)
 
 from src.utils.mask_utils import get_mask_options
 
 
-def sidebar(file_explorer, models):
+def sidebar(file_explorer, job_manager):
     """
     Creates the dash components in the left sidebar of the app
     Args:
         file_explorer:      Dash file explorer
-        models:             Currently available ML algorithms in content registry
+        job_manager:        Job manager object
     """
-    sidebar = [
-        dbc.Accordion(
-            id="sidebar",
-            children=[
-                dbc.AccordionItem(
-                    title="Data selection",
-                    children=file_explorer,
-                ),
-                dbc.AccordionItem(
-                    title="Data transformation",
+    sidebar = html.Div(
+        [
+            dbc.Offcanvas(
+                id="sidebar-offcanvas",
+                is_open=True,
+                backdrop=False,
+                scrollable=True,
+                style={
+                    "padding": "80px 0px 0px 0px",
+                    "width": "500px",
+                },  # Avoids being covered by the navbar
+                title="Controls",
+                children=dbc.Accordion(
+                    id="sidebar",
+                    always_open=True,
                     children=[
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    dbc.Label("Log Transform"), width=4, align="start"
-                                ),
-                                dbc.Col(
+                        dbc.AccordionItem(
+                            title="Data selection",
+                            children=file_explorer,
+                        ),
+                        dbc.AccordionItem(
+                            title="Data transformation",
+                            children=[
+                                ControlItem(
+                                    "",
+                                    "empty-title-log-transform",
                                     dbc.Switch(
                                         id="log-transform",
                                         value=False,
-                                        label_style={"display": "none"},
-                                        style={"height": "20px"},
+                                        label="Log Transform",
                                     ),
-                                    align="start",
                                 ),
-                            ],
-                        ),
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    dbc.Label("Min-Max Percentile"),
-                                    width=4,
-                                ),
-                                dbc.Col(
+                                html.P(),
+                                ControlItem(
+                                    "Min-Max Percentile",
+                                    "min-max-percentile-title",
                                     dcc.RangeSlider(
                                         id="min-max-percentile",
                                         min=0,
@@ -53,130 +59,70 @@ def sidebar(file_explorer, models):
                                             "placement": "bottom",
                                             "always_visible": True,
                                         },
+                                        value=[0, 100],
                                     ),
                                 ),
-                            ],
-                            style={"margin-bottom": "10px"},
-                        ),
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    dbc.Label("Mask Selection"),
-                                    width=4,
-                                ),
-                                dbc.Col(
-                                    dcc.Dropdown(
+                                html.P(),
+                                ControlItem(
+                                    "Mask Selection",
+                                    "mask-dropdown-title",
+                                    dbc.Select(
                                         id="mask-dropdown",
                                         options=get_mask_options(),
+                                        value="None",
                                     ),
-                                ),
-                            ]
-                        ),
-                    ],
-                ),
-                dbc.AccordionItem(
-                    title="Model configuration",
-                    children=[
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    dbc.Label(
-                                        "Action",
-                                        style={
-                                            "height": "100%",
-                                            "display": "flex",
-                                            "align-items": "center",
-                                        },
-                                    ),
-                                    width=2,
-                                ),
-                                dbc.Col(
-                                    dcc.Dropdown(
-                                        id="action",
-                                        options=[
-                                            {"label": "Train", "value": "train_model"},
-                                            {"label": "Tune", "value": "tune_model"},
-                                            {
-                                                "label": "Prediction",
-                                                "value": "prediction_model",
-                                            },
-                                        ],
-                                        value="train_model",
-                                    ),
-                                    width=10,
                                 ),
                             ],
-                            className="mb-3",
                         ),
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    dbc.Label(
-                                        "Model",
-                                        style={
-                                            "height": "100%",
-                                            "display": "flex",
-                                            "align-items": "center",
-                                        },
+                        # TODO: Rename show-reconstructions to show-results
+                        dbc.AccordionItem(
+                            children=[
+                                job_manager,
+                                ControlItem(
+                                    "",
+                                    "empty-title-recons",
+                                    dbc.Switch(
+                                        id="show-reconstructions",
+                                        value=False,
+                                        label="Show Reconstructions",
+                                        disabled=True,
                                     ),
-                                    width=2,
-                                ),
-                                dbc.Col(
-                                    dcc.Dropdown(
-                                        id="model-selection",
-                                        options=models,
-                                        value=models[0]["value"],
-                                    ),
-                                    width=10,
                                 ),
                             ],
-                            className="mb-3",
-                        ),
-                        dbc.Card(
-                            [
-                                dbc.CardBody(
-                                    id="app-parameters",
-                                    style={
-                                        "overflowY": "scroll",
-                                        "height": "58vh",  # Adjust as needed
-                                    },
-                                ),
-                            ]
-                        ),
-                        dbc.Button(
-                            "Execute",
-                            id="execute",
-                            n_clicks=0,
-                            style={
-                                "width": "100%",
-                                "margin-left": "0px",
-                                "margin-top": "10px",
-                            },
+                            title="Model Configuration",
                         ),
                     ],
+                    style={"overflow-y": "scroll", "height": "90vh"},
                 ),
-            ],
-        ),
-        dbc.Modal(
-            [
-                dbc.ModalHeader("Warning"),
-                dbc.ModalBody(id="warning-msg"),
-                dbc.ModalFooter(
-                    [
-                        dbc.Button(
-                            "OK",
-                            id="ok-button",
-                            color="danger",
-                            outline=False,
-                            className="ms-auto",
-                            n_clicks=0,
-                        ),
-                    ]
-                ),
-            ],
-            id="warning-modal",
-            is_open=False,
-        ),
-        dcc.Store(id="warning-cause", data=""),
-    ]
+            ),
+            create_show_sidebar_affix(),
+        ]
+    )
     return sidebar
+
+
+def create_show_sidebar_affix():
+    return html.Div(
+        [
+            dbc.Button(
+                DashIconify(icon="circum:settings", width=20),
+                id="sidebar-view",
+                size="sm",
+                color="secondary",
+                className="rounded-circle",
+                style={"aspectRatio": "1 / 1"},
+            ),
+            dbc.Tooltip(
+                "Toggle sidebar",
+                target="sidebar-view",
+                placement="top",
+            ),
+        ],
+        style={
+            "position": "fixed",
+            "bottom": "60px",
+            "right": "10px",
+            "zIndex": 9999,  # Note: zIndex is unitless
+            "opacity": "0.8",
+        },
+    )

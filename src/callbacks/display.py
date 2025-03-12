@@ -1,21 +1,23 @@
-import os
-import pathlib
-import pickle
-
 import numpy as np
 from dash import ALL, Input, Output, State, callback
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
+from mlex_utils.prefect_utils.core import get_children_flow_run_ids
 from PIL import Image
 
-from src.app_layout import DATA_DIR, TILED_KEY, USER
-from src.utils.job_utils import str_to_dict
-from src.utils.plot_utils import get_bottleneck, plot_figure
+from src.app_layout import DATA_TILED_KEY, USER
+from src.utils.data_utils import hash_list_of_strings, tiled_results
+from src.utils.plot_utils import (
+    generate_scatter_data,
+    get_bottleneck,
+    plot_empty_scatter,
+    plot_figure,
+)
 
 
 @callback(
     Output("current-target-size", "data"),
-    Output("ls_graph", "src"),
+    Output("ls-graph", "src"),
     Input(
         {
             "type": ALL,
@@ -25,22 +27,30 @@ from src.utils.plot_utils import get_bottleneck, plot_figure
         },
         "value",
     ),
-    Input({"type": ALL, "param_key": "target_width", "name": "target_width"}, "value"),
     Input(
-        {"type": ALL, "param_key": "target_height", "name": "target_height"}, "value"
+        {
+            "type": ALL,
+            "param_key": "target_width",
+            "name": "target_width",
+            "layer": "input",
+        },
+        "value",
     ),
-    Input("jobs-table", "selected_rows"),
-    Input("jobs-table", "data"),
-    State("action", "value"),
+    Input(
+        {
+            "type": ALL,
+            "param_key": "target_height",
+            "name": "target_height",
+            "layer": "input",
+        },
+        "value",
+    ),
     prevent_initial_call=True,
 )
 def refresh_bottleneck(
     ls_var,
     target_width,
     target_height,
-    row,
-    data_table,
-    action_selection,
 ):
     """
     This callback refreshes the bottleneck plot according to the selected job type
@@ -48,40 +58,13 @@ def refresh_bottleneck(
         ls_var:             Latent space value
         target_width:       Target width
         target_height:      Target height
-        row:                Selected row (job)
-        data_table:         Lists of jobs
-        action_selection:   Action selected
     Returns:
         current-target-size:    Target size
         ls_graph:               Bottleneck plot
     """
-    # Get selected job type
-    if row and len(row) > 0:
-        selected_job_type = data_table[row[0]]["job_type"]
-    else:
-        selected_job_type = None
-
-    # If selected job type is train_model or tune_model
-    if selected_job_type:
-        if selected_job_type == "train_model":
-            train_params = data_table[row[0]]["parameters"]
-        else:
-            train_params = data_table[row[0]]["parameters"].split(
-                "Training Parameters:"
-            )[-1]
-
-        train_params = str_to_dict(train_params)
-        ls_var = int(train_params["latent_dim"])
-        target_width = int(train_params["target_width"])
-        target_height = int(train_params["target_height"])
-
-    else:
-        if action_selection != "train_model":
-            return [32, 32], get_bottleneck(1, 1, 1, False)
-
-        target_width = target_width[0] if len(target_width) > 0 else 32
-        target_height = target_height[0] if len(target_height) > 0 else 32
-        ls_var = ls_var[0] if len(ls_var) > 0 else 32
+    target_width = target_width[0] if len(target_width) > 0 else 32
+    target_height = target_height[0] if len(target_height) > 0 else 32
+    ls_var = ls_var[0] if len(ls_var) > 0 else 32
 
     # Generate bottleneck plot
     ls_plot = get_bottleneck(ls_var, target_width, target_height)
@@ -89,81 +72,27 @@ def refresh_bottleneck(
 
 
 @callback(
-    Output("img-slider", "max", allow_duplicate=True),
-    Output("img-slider", "value", allow_duplicate=True),
-    Input("jobs-table", "selected_rows"),
-    Input("jobs-table", "data"),
-    State("img-slider", "value"),
-    prevent_initial_call=True,
-)
-def update_slider_boundaries_prediction(
-    row,
-    data_table,
-    slider_ind,
-):
-    """
-    This callback updates the slider boundaries according to the selected job type
-    Args:
-        row:                Selected row (job)
-        data_table:         Lists of jobs
-        slider_ind:         Slider index
-    Returns:
-        img-slider:         Maximum value of the slider
-        img-slider:         Slider index
-    """
-    # Get selected job type
-    if row and len(row) > 0:
-        selected_job_type = data_table[row[0]]["job_type"]
-    else:
-        selected_job_type = None
-
-    # If selected job type is train_model or tune_model
-    if selected_job_type == "prediction_model":
-        job_id = data_table[row[0]]["experiment_id"]
-        data_path = pathlib.Path(f"{DATA_DIR}/mlex_store/{USER}/{job_id}")
-
-        with open(f"{data_path}/.file_manager_vars.pkl", "rb") as file:
-            data_project_dict = pickle.load(file)
-        data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
-
-        # Check if slider index is out of bounds
-        if (
-            len(data_project.datasets) > 0
-            and slider_ind > data_project.datasets[-1].cumulative_data_count - 1
-        ):
-            slider_ind = 0
-
-        return data_project.datasets[-1].cumulative_data_count - 1, slider_ind
-
-    else:
-        raise PreventUpdate
-
-
-@callback(
     Output("img-slider", "max"),
     Output("img-slider", "value"),
     Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
-    Input("jobs-table", "selected_rows"),
     State("img-slider", "value"),
     prevent_initial_call=True,
 )
 def update_slider_boundaries_new_dataset(
     data_project_dict,
-    row,
     slider_ind,
 ):
     """
     This callback updates the slider boundaries according to the selected job type
     Args:
         data_project_dict:  Data project dictionary
-        row:                Selected row (job)
         slider_ind:         Slider index
     Returns:
         img-slider:         Maximum value of the slider
         img-slider:         Slider index
     """
     if data_project_dict != {}:
-        data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
+        data_project = DataProject.from_dict(data_project_dict, api_key=DATA_TILED_KEY)
         if len(data_project.datasets) > 0:
             max_ind = data_project.datasets[-1].cumulative_data_count - 1
         else:
@@ -176,15 +105,13 @@ def update_slider_boundaries_new_dataset(
 
 
 @callback(
-    Output("orig_img", "src"),
+    Output("orig-img", "src"),
     Output("data-size-out", "children"),
     Input("img-slider", "value"),
     Input("current-target-size", "data"),
     Input("log-transform", "value"),
     Input("min-max-percentile", "value"),
-    State({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
-    State("jobs-table", "selected_rows"),
-    State("jobs-table", "data"),
+    Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
 )
 def refresh_image(
     img_ind,
@@ -192,8 +119,6 @@ def refresh_image(
     log_transform,
     percentiles,
     data_project_dict,
-    row,
-    data_table,
 ):
     """
     This callback refreshes the original image according to the selected job type
@@ -203,27 +128,12 @@ def refresh_image(
         log_transform:      Log transform
         percentiles:        Percentiles
         data_project_dict:  Data project dictionary
-        row:                Selected row (job)
-        data_table:         Lists of jobs
     Returns:
         orig_img:           Original image
         data_size:          Data size
     """
-    # Get selected job type
-    if row and len(row) > 0:
-        selected_job_type = data_table[row[0]]["job_type"]
-    else:
-        selected_job_type = None
-
-    if selected_job_type == "prediction_model":
-        job_id = data_table[row[0]]["experiment_id"]
-        data_path = pathlib.Path(f"{DATA_DIR}/mlex_store/{USER}/{job_id}")
-
-        with open(f"{data_path}/.file_manager_vars.pkl", "rb") as file:
-            data_project_dict = pickle.load(file)
-
     if data_project_dict != {}:
-        data_project = DataProject.from_dict(data_project_dict, api_key=TILED_KEY)
+        data_project = DataProject.from_dict(data_project_dict, api_key=DATA_TILED_KEY)
         if (
             len(data_project.datasets) > 0
             and data_project.datasets[-1].cumulative_data_count > 0
@@ -249,97 +159,123 @@ def refresh_image(
 
 
 @callback(
-    Output("rec_img", "src"),
-    Input("img-slider", "value"),
-    Input("jobs-table", "selected_rows"),
-    Input("jobs-table", "data"),
-    Input("current-target-size", "data"),
+    Output(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "project-name-id",
+            "aio_id": "data-clinic-jobs",
+        },
+        "data",
+    ),
+    Input({"base_id": "file-manager", "name": "data-project-dict"}, "data"),
+    prevent_initial_call=True,
 )
-def refresh_reconstruction(
-    img_ind,
-    row,
-    data_table,
-    target_size,
-):
+def update_project_name(data_project_dict):
+    data_project = DataProject.from_dict(data_project_dict)
+    data_uris = [dataset.uri for dataset in data_project.datasets]
+    project_name = hash_list_of_strings(data_uris)
+    return project_name
+
+
+@callback(
+    Output("rec-img", "src", allow_duplicate=True),
+    Input("show-reconstructions", "value"),
+    Input("img-slider", "value"),
+    Input("current-target-size", "data"),
+    Input(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "train-dropdown",
+            "aio_id": "data-clinic-jobs",
+        },
+        "value",
+    ),
+    State(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "project-name-id",
+            "aio_id": "data-clinic-jobs",
+        },
+        "data",
+    ),
+    prevent_initial_call=True,
+)
+def refresh_reconstruction(show_recons, img_ind, target_size, job_id, project_name):
     """
-    This callback refreshes the reconstructed image according to the selected job type
+    This callback refreshes the reconstructed image according to the selected job
     Args:
+        show_recons:        Show reconstructed image
         img_ind:            Image index
-        row:                Selected row (job)
-        data_table:         Lists of jobs
         target_size:        Target size
+        job_id:             Selected job
+        project_name:       Data project name
     Returns:
         rec_img:            Reconstructed image
     """
-    # Get selected job type
-    if row and len(row) > 0:
-        selected_job_type = data_table[row[0]]["job_type"]
-    else:
-        selected_job_type = None
-
-    if selected_job_type == "prediction_model":
-        job_id = data_table[row[0]]["experiment_id"]
-        reconstructed_path = f"{DATA_DIR}/mlex_store/{USER}/{job_id}"
-        if os.path.exists(f"{reconstructed_path}/reconstructed_{img_ind}.jpg"):
-            reconst_img = Image.open(
-                f"{reconstructed_path}/reconstructed_{img_ind}.jpg"
-            )
-        else:
-            reconst_img = Image.fromarray(
-                (np.zeros((target_size[1], target_size[0])).astype(np.uint8))
-            )
-
-    else:
-        reconst_img = Image.fromarray(
-            (np.zeros((target_size[1], target_size[0])).astype(np.uint8))
+    if show_recons:
+        child_job_id = get_children_flow_run_ids(job_id)[1]
+        expected_result_uri = f"{USER}/{project_name}/{child_job_id}/reconstructions"
+        recons_array = tiled_results.get_data_by_trimmed_uri(
+            expected_result_uri, slice=img_ind
         )
-
-    return plot_figure(reconst_img)
+    else:
+        recons_array = np.zeros((target_size[1], target_size[0])).astype(np.uint8)
+    return plot_figure(Image.fromarray(recons_array))
 
 
 @callback(
-    Output("warning-modal", "is_open"),
-    Output("warning-msg", "children"),
-    Input("warning-cause", "data"),
-    State("warning-modal", "is_open"),
-    prevent_initial_call=True,
+    Output("latent-space-viz", "figure"),
+    Input("show-reconstructions", "value"),
+    State(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "train-dropdown",
+            "aio_id": "data-clinic-jobs",
+        },
+        "value",
+    ),
+    State(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "project-name-id",
+            "aio_id": "data-clinic-jobs",
+        },
+        "data",
+    ),
 )
-def open_warning_modal(warning_cause, is_open):
+def show_feature_vectors(show_feature_vectors, job_id, project_name):
     """
-    This callback toggles a warning/error message
+    This callback displays the latent space according to the selected job
     Args:
-        warning_cause:      Cause that triggered the warning
-        is_open:            Close/open state of the warning
+        show_feature_vectors:   Show feature vectors
+        job_id:                 Selected job
+        project_name:           Data project name
     Returns:
-        is_open:            Close/open state of the warning
-         warning_msg:       Warning message
+        scatter:                Scatter plot with feature vectors
     """
-    if warning_cause == "wrong_dataset":
-        return not is_open, "The dataset you have selected is not supported."
-    elif warning_cause == "no_row_selected":
-        return not is_open, "Please select a trained model from the List of Jobs"
-    elif warning_cause == "no_dataset":
-        return not is_open, "Please upload the dataset before submitting the job."
-    elif warning_cause == "data_project_not_ready":
-        return (
-            not is_open,
-            "The data project is still being created. Please try again in a couple minutes.",
-        )
-    else:
-        return False, ""
+    if show_feature_vectors is False:
+        return plot_empty_scatter()
+
+    child_job_id = get_children_flow_run_ids(job_id)[-1]
+    expected_result_uri = f"{USER}/{project_name}/{child_job_id}"
+    latent_vectors = (
+        tiled_results.get_data_by_trimmed_uri(expected_result_uri).read().to_numpy()
+    )
+
+    scatter_data = generate_scatter_data(latent_vectors)
+    return scatter_data
 
 
 @callback(
-    Output("warning-modal", "is_open", allow_duplicate=True),
-    Input("ok-button", "n_clicks"),
+    Output("sidebar-offcanvas", "is_open", allow_duplicate=True),
+    Output("main-display", "style"),
+    Input("sidebar-view", "n_clicks"),
+    State("sidebar-offcanvas", "is_open"),
     prevent_initial_call=True,
 )
-def close_warning_modal(ok_n_clicks):
-    """
-    This callback closes warning/error message
-    Args:
-        ok_n_clicks:        Close the warning
-    Returns:
-        is_open:            Close/open state of the warning
-    """
-    return False
+def toggle_sidebar(n_clicks, is_open):
+    if is_open:
+        style = {}
+    else:
+        style = {"padding": "0px 10px 0px 510px", "width": "100%"}
+    return not is_open, style

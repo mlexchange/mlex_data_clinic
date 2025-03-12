@@ -1,30 +1,12 @@
 import base64
 
-import pandas as pd
+import dash_bootstrap_components as dbc
+import numpy as np
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
-
-
-def generate_loss_plot(loss_file_path):
-    """
-    Generate loss plot
-    Args:
-        loss_file_path:     Path to the loss file
-    Returns:
-        loss plot
-    """
-    df = pd.read_csv(loss_file_path)
-    df.set_index("epoch", inplace=True)
-    try:
-        fig = px.line(df, markers=True)
-        fig.update_layout(
-            xaxis_title="epoch", yaxis_title="loss", margin=dict(l=20, r=20, t=20, b=20)
-        )
-        return fig
-    except Exception as e:
-        print(e)
-        return go.Figure(go.Scatter(x=[], y=[]))
+from dash import html
+from dash_iconify import DashIconify
 
 
 def plot_figure(image):
@@ -130,3 +112,133 @@ def get_bottleneck(ls_var, width, height, annotations=True):
     png = plotly.io.to_image(fig)
     png_base64 = base64.b64encode(png).decode("ascii")
     return "data:image/png;base64,{}".format(png_base64)
+
+
+def generate_notification(title, color, icon, message=""):
+    iconify_icon = DashIconify(
+        icon=icon,
+        width=24,
+        height=24,
+        style={"verticalAlign": "middle"},
+    )
+    return [
+        dbc.Toast(
+            id="auto-toast",
+            children=[
+                html.Div(
+                    [
+                        iconify_icon,
+                        html.Span(title, style={"margin-left": "10px"}),
+                    ],
+                    className="d-flex align-items-center",
+                ),
+                html.P(message, className="mb-0"),
+            ],
+            duration=4000,
+            is_open=True,
+            color=color,
+            style={
+                "position": "fixed",
+                "top": 66,
+                "right": 10,
+                "width": 350,
+                "zIndex": 9999,
+            },
+        )
+    ]
+
+
+def plot_empty_scatter():
+    return go.Figure(
+        go.Scattergl(mode="markers"),
+        layout=go.Layout(
+            autosize=True,
+            margin=go.layout.Margin(
+                l=20,
+                r=20,
+                b=20,
+                t=20,
+                pad=0,
+            ),
+        ),
+    )
+
+
+def generate_scatter_data(latent_vectors):
+    """
+    Generate latent vectors plot
+    """
+    vals_names = {}
+    vals = [-1 for i in range(latent_vectors.shape[0])]
+    vals_names = {a: a for a in np.unique(vals).astype(int)}
+
+    scatter_data = generate_scattergl_plot(
+        latent_vectors[:, 0], latent_vectors[:, 1], vals, vals_names
+    )
+
+    fig = go.Figure(scatter_data)
+    fig.update_layout(
+        margin=go.layout.Margin(l=20, r=20, b=20, t=20, pad=0),
+        legend=dict(tracegroupgap=20),
+    )
+    return fig
+
+
+def generate_scattergl_plot(
+    x_coords,
+    y_coords,
+    labels,
+    label_to_string_map,
+    show_legend=False,
+    custom_indices=None,
+):
+    """
+    Generates a multi-trace Scattergl plot with one trace per label,
+    preserving the exact i-th ordering across all data.
+
+    Each trace is the same length as x_coords/y_coords, but for points
+    not belonging to that trace's label, we insert None. This ensures:
+      - i-th point in the figure is i-th data row (helpful for selectedData).
+      - Each label gets its own legend entry.
+    """
+
+    if custom_indices is None:
+        custom_indices = list(range(len(x_coords)))
+
+    # Gather unique labels in order of first appearance
+    unique_labels = []
+    for lbl in labels:
+        if lbl not in unique_labels:
+            unique_labels.append(lbl)
+
+    traces = []
+    for label in unique_labels:
+        # Initialize the entire length with None
+        trace_x = [None] * len(x_coords)
+        trace_y = [None] * len(y_coords)
+        trace_custom = [None] * len(x_coords)
+
+        # Fill in data only where labels match
+        for i, lbl in enumerate(labels):
+            if lbl == label:
+                trace_x[i] = x_coords[i]
+                trace_y[i] = y_coords[i]
+                trace_custom[i] = custom_indices[i]
+
+        # Convert custom_indices to a 2D array if needed by Plotly
+        trace_custom = np.array(trace_custom).reshape(-1, 1)
+
+        traces.append(
+            go.Scattergl(
+                x=trace_x,
+                y=trace_y,
+                mode="markers",
+                name=str(label_to_string_map[label]),
+                customdata=trace_custom,
+            )
+        )
+
+    fig = go.Figure(data=traces)
+    if not show_legend:
+        fig.update_layout(showlegend=False)
+    return fig

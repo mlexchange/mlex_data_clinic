@@ -4,34 +4,101 @@
 This app provides a training/testing platform for latent space exploration with
 unsupervised deep-learning approaches.
 
-## Running as a standalone application
+## Running as a Standalone Application (Using Docker)
 
-1. Start the compute and content services in the [MLExchange platform](https://github.com/mlexchange/mlex). Before moving to the next step, please make sure that the computing API and the content registry are up and running. For more information, please refer to their respective
-README files.
+The **Prefect server, Tiled server, the application, and the Prefect worker job** all run within a **single Docker container**. This eliminates the need to start the servers separately.
 
-2. Create a new Python environment and install dependencies:
-```
-conda create -n new_env python==3.11
-conda activate new_env
-pip install .
-```
+However, the **Prefect worker** must be run separately on your local machine (refer to step 5).
 
-3. Create a `.env` file using `.env.example` as reference. Update this file accordingly.
+## Steps to Run the Application
 
-4. Start example app:
-```
-python frontend.py
+### 1 Clone the Repository
+
+```sh
+git clone https://github.com/mlexchange/mlex_data_clinic.git
+cd mlex_data_clinic
 ```
 
-Finally, you can access Data CLinic at:
-* Dash app: http://localhost:8072/
+### 2 Configure Environment Variables
 
-# Model Description
+Create a `.env` file using `.env.example` as a reference:
+
+```sh
+cp .env.example .env
+```
+
+Then **update the** `.env` file with the correct values.
+
+**Important Note:** Due to the current tiled configuration, ensure that the `WRITE_DIR` is a subdirectory of the `READ_DIR` if the same tiled server is used for both reading data and writing results.
+
+### 3 Build and Start the Application
+
+```sh
+docker compose up -d
+```
+
+* `-d` → Runs the containers in the background (detached mode).
+
+### 4 Verify Running Containers
+
+```sh
+docker ps
+```
+
+### 5 Start a Prefect Worker
+
+Open another terminal and start a Prefect worker. Refer to [mlex_prefect_worker](https://github.com/mlexchange/mlex_prefect_worker) for detailed instructions on setting up and running the worker.
+
+
+### 6 Access the Application
+
+Once the container is running, open your browser and visit:
+* **Dash app:** http://localhost:8072/
+
+### 7 Stopping the Application
+
+To stop and remove the running containers, use:
+
+```sh
+docker compose down
+```
+
+This will **shut down all services** but **retain data** if volumes are used.
+
+
+## Model Description
 **pytorch_autoencoder:** User-defined autoencoders implemented in [PyTorch](https://pytorch.org).
 
 Further information can be found in [mlex_pytorch_autoencoders](https://github.com/mlexchange/mlex_pytorch_autoencoders/tree/main).
 
-To make existing algorithms available in Data Clinic, make sure to upload the `model description` to the content registry.
+## Developer Setup
+If you are developing this library, there are a few things to note.
+
+1. Install development dependencies:
+
+```
+pip install .
+pip install ".[dev]"
+```
+
+2. Install pre-commit
+This step will setup the pre-commit package. After this, commits will get run against flake8, black, isort.
+
+```
+pre-commit install
+```
+
+3. (Optional) If you want to check what pre-commit would do before commiting, you can run:
+
+```
+pre-commit run --all-files
+```
+
+4. To run test cases:
+
+```
+python -m pytest
+```
 
 # Copyright
 MLExchange Copyright (c) 2024, The Regents of the University of California, through Lawrence Berkeley National Laboratory (subject to receipt of any required approvals from the U.S. Dept. of Energy). All rights reserved.

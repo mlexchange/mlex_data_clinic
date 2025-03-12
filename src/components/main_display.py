@@ -1,16 +1,19 @@
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
+from src.utils.plot_utils import plot_empty_scatter
 
-def main_display(loss_plot, job_table):
+
+def main_display(loss_plot):
     """
     Creates the dash components within the main display in the app
     Args:
         loss_plot:          Loss plot of trainin process
-        job_table:          Job table
     """
     main_display = html.Div(
-        [
+        id="main-display",
+        style={"padding": "0px 10px 0px 510px"},
+        children=[
             dbc.Card(
                 id="inter_graph",
                 style={"width": "100%"},
@@ -26,7 +29,7 @@ def main_display(loss_plot, job_table):
                                             parent_className="transparent-loader-wrapper",
                                             children=[
                                                 html.Img(
-                                                    id="orig_img",
+                                                    id="orig-img",
                                                     title="Input Image",
                                                     style={
                                                         "width": "15vw",
@@ -39,7 +42,7 @@ def main_display(loss_plot, job_table):
                                             type="circle",
                                         ),
                                         html.Img(
-                                            id="ls_graph",
+                                            id="ls-graph",
                                             title="",
                                             style={
                                                 "width": "30vw",
@@ -52,7 +55,7 @@ def main_display(loss_plot, job_table):
                                             id="loading-recons",
                                             parent_className="transparent-loader-wrapper",
                                             children=html.Img(
-                                                id="rec_img",
+                                                id="rec-img",
                                                 title="Reconstructed Image",
                                                 style={
                                                     "width": "15vw",
@@ -124,9 +127,24 @@ def main_display(loss_plot, job_table):
                     dbc.CardFooter(id="data-size-out"),
                 ],
             ),
+            dbc.Card(
+                id="latent-space-card",
+                style={"width": "100%"},
+                children=[
+                    dbc.CardHeader(
+                        "Latent Space Visualization", className="card-title"
+                    ),
+                    dbc.CardBody(
+                        dcc.Graph(
+                            id="latent-space-viz",
+                            figure=plot_empty_scatter(),
+                            style={"width": "98%", "height": "30vh"},
+                        )
+                    ),
+                ],
+            ),
             html.Div(loss_plot),
-            job_table,
             dcc.Interval(id="interval", interval=5 * 1000, n_intervals=0),
-        ]
+        ],
     )
     return main_display
