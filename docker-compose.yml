@@ -102,6 +102,8 @@ services:
       # Mode
       MODE: "development"
       USER: ${USER}
+      # MLflow
+      MLFLOW_TRACKING_URI: '${MLFLOW_TRACKING_URI}'
     volumes:
       - $READ_DIR:/tiled_storage
     ports:
