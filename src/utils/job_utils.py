@@ -20,6 +20,7 @@ MAX_TIME_GPU = os.getenv("MAX_TIME_CPU", "1:00:00")
 SUBMISSION_SSH_KEY = os.getenv("SUBMISSION_SSH_KEY", "")
 FORWARD_PORTS = json.loads(os.getenv("FORWARD_PORTS", "[]"))
 CONTAINER_NETWORK = os.getenv("CONTAINER_NETWORK", "")
+MLFLOW_TRACKING_URI= os.getenv("MLFLOW_TRACKING_URI", "http://mlflow:5000")
 
 
 def parse_tiled_url(url, user, project_name, tiled_base_path="/api/v1/metadata"):
@@ -61,6 +62,7 @@ def parse_train_job_params(
         "results_tiled_uri": parse_tiled_url(RESULTS_TILED_URI, user, project_name),
         "results_tiled_api_key": RESULTS_TILED_API_KEY,
         "results_dir": f"{results_dir}",
+        "mlflow_uri": MLFLOW_TRACKING_URI,
     }
 
     ls_python_file_name_train = latent_space_params["python_file_name"]["train"]
