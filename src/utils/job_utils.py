@@ -3,7 +3,6 @@ import json
 import os
 from urllib.parse import urljoin
 
-
 # I/O parameters for job execution
 READ_DIR_MOUNT = os.getenv("READ_DIR_MOUNT", None)
 WRITE_DIR_MOUNT = os.getenv("WRITE_DIR_MOUNT", None)
