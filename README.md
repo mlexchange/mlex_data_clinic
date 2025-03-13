@@ -1,4 +1,4 @@
-# mlex_data_clinic
+# MLExchange Data Clinic
 
 ## Description
 This app provides a training/testing platform for latent space exploration with
