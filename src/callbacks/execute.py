@@ -1,11 +1,12 @@
 import json
+import logging
 import os
 import traceback
 import uuid
 from datetime import datetime
 
 import pytz
-from dash import MATCH, Input, Output, State, callback, html
+from dash import MATCH, Input, Output, State, callback, html, no_update
 from dash.exceptions import PreventUpdate
 from file_manager.data_project import DataProject
 from mlex_utils.prefect_utils.core import (
@@ -36,6 +37,8 @@ FLOW_NAME = os.getenv("FLOW_NAME", "")
 PREFECT_TAGS = json.loads(os.getenv("PREFECT_TAGS", '["data-clinic"]'))
 WRITE_DIR = os.getenv("WRITE_DIR", "")
 FLOW_TYPE = os.getenv("FLOW_TYPE", "conda")
+
+logger = logging.getLogger(__name__)
 
 
 @callback(
@@ -170,7 +173,7 @@ def run_train(
                 notification_color = "indigo"
             except Exception as e:
                 # Print the traceback to the console
-                traceback.print_exc()
+                logger.error(f"Error submitting job: {e} \n{traceback.format_exc()}")
                 job_uid = None
                 job_message = f"Job presented error: {e}"
                 notification_color = "danger"
@@ -214,8 +217,8 @@ def run_train(
 def update_model_parameters(job_id, current_params):
     try:
         job_parameters = get_flow_run_parameters(job_id)
-    except Exception:
-        traceback.print_exc()
+    except Exception as e:
+        logger.error(f"Error submitting job: {e} \n{traceback.format_exc()}")
         raise PreventUpdate
     train_parameters = job_parameters["params_list"][0]["params"]
     model_parameters = train_parameters["model_parameters"]
@@ -225,6 +228,7 @@ def update_model_parameters(job_id, current_params):
 
 @callback(
     Output("show-reconstructions", "disabled"),
+    Output("show-reconstructions", "value"),
     Input(
         {
             "component": "DbcJobManagerAIO",
@@ -232,6 +236,14 @@ def update_model_parameters(job_id, current_params):
             "aio_id": "data-clinic-jobs",
         },
         "value",
+    ),
+    Input(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "check-job",
+            "aio_id": "data-clinic-jobs",
+        },
+        "n_intervals",
     ),
     State(
         {
@@ -243,32 +255,43 @@ def update_model_parameters(job_id, current_params):
     ),
     prevent_initial_call=True,
 )
-def allow_show_reconstructions(job_id, project_name):
+def allow_show_reconstructions(job_id, n_intervals, project_name):
     """
     Determine whether to show reconstructions for the selected job. This callback checks whether a
     given job has completed and whether its reconstruction data is available.
     Args:
         job_id:             Selected job
+        n_intervals:        Number of intervals
         project_name:       Data project name
-        img_ind:            Image index
     Returns:
         rec_img:            Reconstructed image
     """
-    children_job_ids = get_children_flow_run_ids(job_id)
+    if job_id is not None:
+        children_job_ids = get_children_flow_run_ids(job_id)
 
-    if (
-        len(children_job_ids) != 3
-        or get_flow_run_state(children_job_ids[1]) != "COMPLETED"
-    ):
-        return True
+        if (
+            len(children_job_ids) != 3
+            or get_flow_run_state(children_job_ids[1]) != "COMPLETED"
+        ):
+            return True, False
 
-    child_job_id = children_job_ids[1]
-    expected_result_uri = f"{USER}/{project_name}/{child_job_id}/reconstructions"
-    try:
-        tiled_results.get_data_by_trimmed_uri(expected_result_uri)
-        return False
-    except Exception:
-        return True
+        recons_child_job_id = children_job_ids[1]
+        expected_recons_uri = (
+            f"{USER}/{project_name}/{recons_child_job_id}/reconstructions"
+        )
+        latent_vector_child_job_id = children_job_ids[2]
+        expected_latent_vector_uri = (
+            f"{USER}/{project_name}/{latent_vector_child_job_id}"
+        )
+        try:
+            tiled_results.get_data_by_trimmed_uri(expected_recons_uri)
+            tiled_results.get_data_by_trimmed_uri(expected_latent_vector_uri).read()
+            return False, no_update
+        except Exception as e:
+            logger.error(f"Error submitting job: {e} \n{traceback.format_exc()}")
+            return True, False
+    else:
+        return True, False
 
 
 @callback(
@@ -288,26 +311,33 @@ def allow_show_reconstructions(job_id, project_name):
         },
         "value",
     ),
+    Input(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "check-job",
+            "aio_id": "data-clinic-jobs",
+        },
+        "n_intervals",
+    ),
     prevent_initial_call=True,
 )
-def allow_show_stats(job_id):
-    children_job_ids = get_children_flow_run_ids(job_id)
+def allow_show_stats(job_id, chjeck_job_n_intervals):
+    if job_id is not None:
+        children_job_ids = get_children_flow_run_ids(job_id)
 
-    if (
-        len(children_job_ids) > 0
-        and get_flow_run_state(children_job_ids[0]) != "COMPLETED"
-    ):
-        return True
+        if len(children_job_ids) == 0 or get_flow_run_state(
+            children_job_ids[0]
+        ) not in ["COMPLETED", "RUNNING"]:
+            return True
 
-    child_job_id = children_job_ids[0]  # training job
+        child_job_id = children_job_ids[0]  # training job
 
-    # Check if the report file exists
-    expected_report_path = f"{WRITE_DIR}/{USER}/models/{child_job_id}/report.html"
-    print(expected_report_path, flush=True)
-    if os.path.exists(expected_report_path):
-        return False
-    else:
-        return True
+        # Check if the report file exists
+        expected_report_path = f"{WRITE_DIR}/{USER}/models/{child_job_id}/report.html"
+        if os.path.exists(expected_report_path):
+            return False
+
+    return True
 
 
 @callback(
@@ -337,7 +367,6 @@ def show_training_stats(show_stats_n_clicks, job_id):
         children_job_ids = get_children_flow_run_ids(job_id)
         child_job_id = children_job_ids[0]
         expected_report_path = f"{WRITE_DIR}/{USER}/models/{child_job_id}/report.html"
-        print(expected_report_path, flush=True)
 
         with open(expected_report_path, "r") as f:
             report_html = f.read()
@@ -498,7 +527,9 @@ def run_inference(
                     notification_color = "indigo"
                 except Exception as e:
                     # Print the traceback to the console
-                    traceback.print_exc()
+                    logger.error(
+                        f"Error submitting job: {e} \n{traceback.format_exc()}"
+                    )
                     job_message = f"Job presented error: {e}"
                     notification_color = "danger"
             else:
