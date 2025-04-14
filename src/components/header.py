@@ -87,7 +87,7 @@ def header(app_title, github_url):
                                                             "background-color": "white",
                                                             "border": "0px",
                                                         },
-                                                        href="https://mlexchange.als.lbl.gov",
+                                                        href=f"{github_url}/blob/master/README.md",
                                                     ),
                                                     dbc.Tooltip(
                                                         "Go to Docs",
