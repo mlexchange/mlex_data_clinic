@@ -6,7 +6,7 @@
         "type": "latent_space_extraction",
         "owner": "mlexchange team",
         "image_name": "ghcr.io/mlexchange/mlex_pytorch_autoencoders",
-        "image_tag": "main",
+        "image_tag": "latest",
         "conda_env": "mlex_pytorch_autoencoders",
         "application": [
             "data_clinic"
@@ -356,13 +356,13 @@
                 "name": "num_workers",
                 "title": "Number of workers",
                 "param_key": "num_workers",
-                "value": 2
+                "value": 0
             }
         ],
         "python_file_name": {
-            "train": "src/train.py",
-            "inference": "src/inference.py",
-            "tune": "src/tune.py"
+            "train": "mlex_pytorch_autoencoders/train.py",
+            "inference": "mlex_pytorch_autoencoders/inference.py",
+            "tune": "mlex_pytorch_autoencoders/tune.py"
         },
         "public": false
         },
