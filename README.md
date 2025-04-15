@@ -1,4 +1,4 @@
-# mlex_data_clinic
+# MLExchange Data Clinic
 
 ## Description
 This app provides a training/testing platform for latent space exploration with
@@ -6,7 +6,7 @@ unsupervised deep-learning approaches.
 
 ## Running as a Standalone Application (Using Docker)
 
-The **Prefect server, Tiled server, the application, and the Prefect worker job** all run within a **single Docker container**. This eliminates the need to start the servers separately.
+The **Prefect server, Tiled server and the application** are all defined within a **single Docker Compose file**. Each service runs in its own Docker container, simplifying the setup process while maintaining modularity.
 
 However, the **Prefect worker** must be run separately on your local machine (refer to step 5).
 
@@ -30,6 +30,26 @@ cp .env.example .env
 Then **update the** `.env` file with the correct values.
 
 **Important Note:** Due to the current tiled configuration, ensure that the `WRITE_DIR` is a subdirectory of the `READ_DIR` if the same tiled server is used for both reading data and writing results.
+
+#### MLFlow Configuration in .env
+
+When setting `MLFLOW_TRACKING_URI` in the `.env` file:
+
+- If you run the [MLFlow server](https://github.com/xiaoyachong/mlex_mlflow) locally, you can set it to:
+  ```
+  MLFLOW_TRACKING_URI="http://mlflow-server:5000"
+  ```
+  This works because the MLFlow server also runs in the `mle_net` Docker network.
+
+- If you run MLFlow server on vaughan and use SSH port forwarding:
+  ```
+  ssh -S forward -L 5000:localhost:5000 <your-username>@vaughan.als.lbl.gov
+  ```
+  Then you can set it to:
+  ```
+  MLFLOW_TRACKING_URI="http://host.docker.internal:5000"
+  ```
+
 
 ### 3 Build and Start the Application
 
