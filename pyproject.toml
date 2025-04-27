@@ -30,6 +30,7 @@ dependencies = [
     "humanhash3",
     "mlex_file_manager@git+https://github.com/mlexchange/mlex_file_manager.git",
     "mlex_utils[all]@git+https://github.com/mlexchange/mlex_utils.git",
+    "mlflow",
     "numpy>=1.19.5",
     "pandas",
     "Pillow",

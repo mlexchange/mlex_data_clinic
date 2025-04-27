@@ -6,7 +6,7 @@ unsupervised deep-learning approaches.
 
 ## Running as a Standalone Application (Using Docker)
 
-The **Prefect server, Tiled server, the application, and the Prefect worker job** all run within a **single Docker container**. This eliminates the need to start the servers separately.
+The **Prefect server, Tiled server and the application** are all defined within a **single Docker Compose file**. Each service runs in its own Docker container, simplifying the setup process while maintaining modularity.
 
 However, the **Prefect worker** must be run separately on your local machine (refer to step 5).
 
