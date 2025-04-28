@@ -10,6 +10,8 @@ WRITE_DIR = os.getenv("WRITE_DIR", "")
 RESULTS_TILED_URI = os.getenv("RESULTS_TILED_URI", "")
 RESULTS_TILED_API_KEY = os.getenv("RESULTS_TILED_API_KEY", "")
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "")
+MLFLOW_TRACKING_USERNAME = os.getenv("MLFLOW_TRACKING_USERNAME", "")
+MLFLOW_TRACKING_PASSWORD = os.getenv("MLFLOW_TRACKING_PASSWORD", "")
 
 # Flow parameters
 PARTITIONS_CPU = json.loads(os.getenv("PARTITIONS_CPU", "[]"))
@@ -63,6 +65,8 @@ def parse_train_job_params(
         "results_tiled_api_key": RESULTS_TILED_API_KEY,
         "results_dir": f"{results_dir}",
         "mlflow_uri": MLFLOW_TRACKING_URI,
+        "mlflow_tracking_username": MLFLOW_TRACKING_USERNAME,
+        "mlflow_tracking_password": MLFLOW_TRACKING_PASSWORD,
     }
 
     ls_python_file_name_train = latent_space_params["python_file_name"]["train"]
@@ -241,6 +245,8 @@ def parse_inference_job_params(
         "results_tiled_api_key": RESULTS_TILED_API_KEY,
         "results_dir": f"{results_dir}",
         "mlflow_uri": MLFLOW_TRACKING_URI,
+        "mlflow_tracking_username": MLFLOW_TRACKING_USERNAME,
+        "mlflow_tracking_password": MLFLOW_TRACKING_PASSWORD,
     }
 
     ls_python_file_name_inference = latent_space_params["python_file_name"]["inference"]
