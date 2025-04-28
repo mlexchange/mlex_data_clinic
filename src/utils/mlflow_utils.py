@@ -19,8 +19,8 @@ def check_mlflow_ready():
         Exception: If MLflow is not reachable
     """
     try:
-        os.environ['MLFLOW_TRACKING_USERNAME'] = MLFLOW_TRACKING_USERNAME
-        os.environ['MLFLOW_TRACKING_PASSWORD'] = MLFLOW_TRACKING_PASSWORD
+        os.environ["MLFLOW_TRACKING_USERNAME"] = MLFLOW_TRACKING_USERNAME
+        os.environ["MLFLOW_TRACKING_PASSWORD"] = MLFLOW_TRACKING_PASSWORD
         mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
         client = MlflowClient()  # noqa: F841
         return True
