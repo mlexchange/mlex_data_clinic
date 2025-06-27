@@ -68,7 +68,7 @@ services:
       mle_net:
 
   mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.22.0
+    image: ghcr.io/mlflow/mlflow:v2.22.0 
     container_name: mlflow-server
     command: >
       /bin/sh -c "pip install --no-cache-dir psycopg2-binary 'mlflow[auth]' &&
@@ -87,14 +87,12 @@ services:
       - MLFLOW_TRACKING_PASSWORD=${MLFLOW_TRACKING_PASSWORD}
       - MLFLOW_FLASK_SERVER_SECRET_KEY=${MLFLOW_FLASK_SERVER_SECRET_KEY}
       - MLFLOW_AUTH_CONFIG_PATH=/basic_auth.ini
-      - TMPDIR=/mlflow_tmp  # Set temp directory to dedicated volume
     depends_on:
       - mlflow_db
     networks:
       - mle_net
     volumes:
       - ./data/mlflow_storage:/mlartifacts:rw  # Persist MLflow models, logs, and artifacts
-      - ./data/mlflow_tmp:/mlflow_tmp:rw      # Dedicated volume for temporary files
       - ./data/mlflow_auth:/mlflow_auth:rw # Dedicated volume for auth database
       - ./basic_auth.ini:/basic_auth.ini
 
@@ -155,9 +153,11 @@ services:
       MLFLOW_TRACKING_URI: '${MLFLOW_TRACKING_URI}'
       MLFLOW_TRACKING_USERNAME: '${MLFLOW_TRACKING_USERNAME}'
       MLFLOW_TRACKING_PASSWORD: '${MLFLOW_TRACKING_PASSWORD}'
+      MLFLOW_CACHE_DIR: "/mlflow_cache"
     volumes:
       - $READ_DIR:/tiled_storage
       - ./src:/app/work/src
+      - ./data/mlflow_cache:/mlflow_cache
     ports:
       - 127.0.0.1:8072:8070
     depends_on:

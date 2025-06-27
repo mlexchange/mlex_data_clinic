@@ -58,13 +58,44 @@ Create a `basic_auth.ini` file using `basic_auth.ini.example` as a reference:
 cp basic_auth.ini.example basic_auth.ini
 ```
 
-### 3 Build and Start the Application
+
+### 3. Build and Start the Application
+
+#### 3.1 Algorithm Registry Setup in MLFlow
+
+Before starting the application, you need to register your algorithms in MLflow. This is a one-time setup process:
+
+1. Start only the MLflow services:
+   ```sh
+   docker compose up -d mlflow mlflow_db
+   ```
+
+2. Wait a few seconds for MLflow to initialize, then register the algorithms:
+   ```sh
+   cd scripts
+   python save_mlflow_algorithms.py
+   ```
+   
+   This script will:
+   - Connect to the MLflow server
+   - List any existing algorithms
+   - Register all algorithms from the JSON file specified by the `ALGORITHM_JSON_PATH` environment variable
+   - Show the registration status for each algorithm
+
+   > **Note:** By default, `ALGORITHM_JSON_PATH` points to `../src/assets/default_models.json`. You can customize this by setting the environment variable in your `.env` file.
+
+#### 3.2 Start the Full Application
+
+After successfully registering the algorithms, you can start the complete application:
 
 ```sh
 docker compose up -d
 ```
 
-* `-d` → Runs the containers in the background (detached mode).
+This command will:
+- Start all services defined in your docker-compose.yml
+- Run the containers in the background (detached mode)
+- Use the algorithms registered in MLflow
 
 ### 4 Verify Running Containers
 

@@ -16,7 +16,7 @@ from src.components.infrastructure import create_infra_state_affix
 from src.components.main_display import main_display
 from src.components.sidebar import sidebar
 from src.components.training_stats import training_stats_plot
-from src.utils.model_utils import Models
+from src.utils.mlflow_algorithm import MlflowAlgorithmClient 
 
 load_dotenv(".env")
 
@@ -64,13 +64,11 @@ dash_file_explorer.init_callbacks(app)
 file_explorer = dash_file_explorer.file_explorer
 
 # GET MODELS
-latent_space_models = Models(
-    modelfile_path="./src/assets/default_models.json",
-    model_type="latent_space_extraction",
-)
-dim_reduction_models = Models(
-    modelfile_path="./src/assets/default_models.json", model_type="dimension_reduction"
-)
+latent_space_models = MlflowAlgorithmClient()
+latent_space_models.load_from_mlflow(algorithm_type="latent_space_extraction")
+
+dim_reduction_models = MlflowAlgorithmClient()
+dim_reduction_models.load_from_mlflow(algorithm_type="dimension_reduction")
 
 # SETUP MLEx COMPONENTS
 mlex_components = MLExComponents("dbc")
