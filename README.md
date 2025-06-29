@@ -59,7 +59,7 @@ cp basic_auth.ini.example basic_auth.ini
 ```
 
 
-### 3. Build and Start the Application
+### 3 Build and Start the Application
 
 #### 3.1 Algorithm Registry Setup in MLFlow
 
@@ -82,7 +82,7 @@ Before starting the application, you need to register your algorithms in MLflow.
    - Register all algorithms from the JSON file specified by the `ALGORITHM_JSON_PATH` environment variable
    - Show the registration status for each algorithm
 
-   > **Note:** By default, `ALGORITHM_JSON_PATH` points to `../src/assets/default_models.json`. You can customize this by setting the environment variable in your `.env` file.
+   > **Note:** By default, `ALGORITHM_JSON_PATH` points to `./all_models.json`, which is the combination of the models defined in Data Clinic and Latent Space Explorer. You can customize this by setting the environment variable in your `.env` file.
 
 #### 3.2 Start the Full Application
 

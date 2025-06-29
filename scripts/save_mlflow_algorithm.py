@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 # Add the project root directory to Python path to fix imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.utils.mlflow_algorithm import MlflowAlgorithmClient
+from src.utils.mlflow_utils import MlflowAlgorithmClient
 
 # Load environment variables from .env file
 load_dotenv(dotenv_path="../.env")
@@ -19,7 +19,7 @@ MLFLOW_TRACKING_USERNAME = os.getenv("MLFLOW_TRACKING_USERNAME", "")
 MLFLOW_TRACKING_PASSWORD = os.getenv("MLFLOW_TRACKING_PASSWORD", "")
 # Algorithm JSON path from environment variable
 ALGORITHM_JSON_PATH = os.getenv(
-    "ALGORITHM_JSON_PATH", "../src/assets/default_models.json"
+    "ALGORITHM_JSON_PATH", "./all_models.json"
 )
 
 
@@ -38,12 +38,11 @@ def test_mlflow_connection(tracking_uri=None, username=None, password=None):
     password = password or MLFLOW_TRACKING_PASSWORD
 
     logger.info(f"Testing MLflow connection to {tracking_uri}")
+    mlflow_algorithm_client = MlflowAlgorithmClient(tracking_uri, username, password)
 
-    if MlflowAlgorithmClient.check_mlflow_ready(tracking_uri, username, password):
+    if mlflow_algorithm_client.check_mlflow_ready():
         logger.info("✅ MLflow connection successful")
-        return MlflowAlgorithmClient(
-            tracking_uri=tracking_uri, username=username, password=password
-        )
+        return mlflow_algorithm_client
     else:
         logger.error("❌ MLflow connection failed")
         return None
