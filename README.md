@@ -1,4 +1,4 @@
-# mlex_data_clinic
+# MLExchange Data Clinic
 
 ## Description
 This app provides a training/testing platform for latent space exploration with
@@ -6,7 +6,7 @@ unsupervised deep-learning approaches.
 
 ## Running as a Standalone Application (Using Docker)
 
-The **Prefect server, Tiled server, the application, and the Prefect worker job** all run within a **single Docker container**. This eliminates the need to start the servers separately.
+The **Prefect server, Tiled server and the application** are all defined within a **single Docker Compose file**. Each service runs in its own Docker container, simplifying the setup process while maintaining modularity.
 
 However, the **Prefect worker** must be run separately on your local machine (refer to step 5).
 
@@ -31,13 +31,71 @@ Then **update the** `.env` file with the correct values.
 
 **Important Note:** Due to the current tiled configuration, ensure that the `WRITE_DIR` is a subdirectory of the `READ_DIR` if the same tiled server is used for both reading data and writing results.
 
+#### MLFlow Configuration in .env
+
+When setting `MLFLOW_TRACKING_URI` in the `.env` file:
+
+- If you run the [MLFlow server](https://github.com/xiaoyachong/mlex_mlflow) locally, you can set it to:
+  ```
+  MLFLOW_TRACKING_URI="http://mlflow-server:5000"
+  ```
+  This works because the MLFlow server also runs in the `mle_net` Docker network.
+
+- If you run MLFlow server on vaughan and use SSH port forwarding:
+  ```
+  ssh -S forward -L 5000:localhost:5000 <your-username>@vaughan.als.lbl.gov
+  ```
+  Then you can set it to:
+  ```
+  MLFLOW_TRACKING_URI="http://host.docker.internal:5000"
+  ```
+
+You also need to set  `MLFLOW_TRACKING_USERNAME` and `MLFLOW_TRACKING_PASSWORD` in the `.env` file and modify the admin_username and admin_password in `basic_auth.ini` as well.
+
+Create a `basic_auth.ini` file using `basic_auth.ini.example` as a reference:
+
+```sh
+cp basic_auth.ini.example basic_auth.ini
+```
+
+
 ### 3 Build and Start the Application
+
+#### 3.1 Algorithm Registry Setup in MLFlow
+
+Before starting the application, you need to register your algorithms in MLflow. This is a one-time setup process:
+
+1. Start only the MLflow services:
+   ```sh
+   docker compose up -d mlflow mlflow_db
+   ```
+
+2. Wait a few seconds for MLflow to initialize, then register the algorithms:
+   ```sh
+   cd scripts
+   python save_mlflow_algorithms.py
+   ```
+   
+   This script will:
+   - Connect to the MLflow server
+   - List any existing algorithms
+   - Register all algorithms from the JSON file specified by the `ALGORITHM_JSON_PATH` environment variable
+   - Show the registration status for each algorithm
+
+   > **Note:** By default, `ALGORITHM_JSON_PATH` points to `./all_models.json`, which is the combination of the models defined in Data Clinic and Latent Space Explorer. You can customize this by setting the environment variable in your `.env` file.
+
+#### 3.2 Start the Full Application
+
+After successfully registering the algorithms, you can start the complete application:
 
 ```sh
 docker compose up -d
 ```
 
-* `-d` → Runs the containers in the background (detached mode).
+This command will:
+- Start all services defined in your docker-compose.yml
+- Run the containers in the background (detached mode)
+- Use the algorithms registered in MLflow
 
 ### 4 Verify Running Containers
 

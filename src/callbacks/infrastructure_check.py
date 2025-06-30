@@ -6,6 +6,7 @@ from dash import Input, Output, callback, no_update
 
 from src.components.infrastructure import create_infra_state_details
 from src.utils.data_utils import tiled_results
+from src.utils.mlflow_utils import MlflowAlgorithmClient
 from src.utils.prefect import check_prefect_ready, check_prefect_worker_ready
 
 TIMEZONE = os.getenv("TIMEZONE", "US/Pacific")
@@ -24,11 +25,21 @@ def check_infra_state(n_intervals):
 
     any_infra_down = False
 
-    # The segmentation application will make sure that all containers that are needed exist
+    # The application will make sure that all containers that are needed exist
     tiled_results_ready = tiled_results.check_dataloader_ready()
     infra_state["tiled_results_ready"] = tiled_results_ready
     if not tiled_results_ready:
         any_infra_down = True
+
+    # MLFLOW: Check MLFlow is reachable
+    try:
+        mlflow_client = MlflowAlgorithmClient()
+        infra_state["mlflow_ready"] = mlflow_client.check_mlflow_ready()
+        if not infra_state["mlflow_ready"]:
+            any_infra_down = True
+    except Exception:
+        any_infra_down = True
+        infra_state["mlflow_ready"] = False
 
     # Prefect: Check prefect API is reachable, and the worker is ready (flow is deployed and ready)
     try:
@@ -43,6 +54,7 @@ def check_infra_state(n_intervals):
     except Exception:
         any_infra_down = True
         infra_state["prefect_worker_ready"] = False
+
     if any_infra_down:
         infra_state["any_infra_down"] = True
     else:
@@ -68,6 +80,7 @@ def update_infra_state(infra_state):
 
     infra_details = create_infra_state_details(
         tiled_results_ready=infra_state["tiled_results_ready"],
+        mlflow_ready=infra_state["mlflow_ready"],
         prefect_ready=infra_state["prefect_ready"],
         prefect_worker_ready=infra_state["prefect_worker_ready"],
         timestamp=last_checked,
