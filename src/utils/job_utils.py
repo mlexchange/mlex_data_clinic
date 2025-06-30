@@ -140,7 +140,9 @@ def parse_inference_job_params(
             "model_name": dim_reduction_params["model_name"],
             "task_name": "run",
             "params": {
-                "io_parameters": copy.copy(io_parameters),  # Ensures uid_retrieve is empty
+                "io_parameters": copy.copy(
+                    io_parameters
+                ),  # Ensures uid_retrieve is empty
                 "model_parameters": {
                     "n_components": 2,
                     "min_dist": 0.1,

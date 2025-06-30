@@ -18,9 +18,7 @@ MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI_OUTSIDE", "http://localhost
 MLFLOW_TRACKING_USERNAME = os.getenv("MLFLOW_TRACKING_USERNAME", "")
 MLFLOW_TRACKING_PASSWORD = os.getenv("MLFLOW_TRACKING_PASSWORD", "")
 # Algorithm JSON path from environment variable
-ALGORITHM_JSON_PATH = os.getenv(
-    "ALGORITHM_JSON_PATH", "./all_models.json"
-)
+ALGORITHM_JSON_PATH = os.getenv("ALGORITHM_JSON_PATH", "./all_models.json")
 
 
 # Setup logging

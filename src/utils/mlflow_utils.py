@@ -285,11 +285,11 @@ class MlflowAlgorithmClient:
             return self.algorithms[key]
         except KeyError:
             raise KeyError(f"An algorithm with name '{key}' does not exist.")
-        
+
     def check_mlflow_ready(self):
         """
         Check if MLflow server is reachable by performing a lightweight API call.
-        
+
         Returns:
             bool: True if MLflow server is reachable, False otherwise
         """

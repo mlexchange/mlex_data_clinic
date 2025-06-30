@@ -136,7 +136,7 @@ def run_train(
 
         latent_space_params = latent_space_models[model_name]
         dim_reduction_params = dim_reduction_models[
-            "umap_v1.0.0" #since there is no dim_reduction model seletion in UI, we use umap as default
+            "umap_v1.0.0"  # since there is no dim_reduction model seletion in UI, we use umap as default
         ]
         train_params = parse_train_job_params(
             data_project,
@@ -476,7 +476,7 @@ def run_inference(
         data_project = DataProject.from_dict(data_project_dict)
         latent_space_params = latent_space_models[model_name]
         dim_reduction_params = dim_reduction_models[
-            "umap_v1.0.0" #since there is no dim_reduction model seletion in UI, we use umap as default
+            "umap_v1.0.0"  # since there is no dim_reduction model seletion in UI, we use umap as default
         ]
         inference_params = parse_inference_job_params(
             data_project,
