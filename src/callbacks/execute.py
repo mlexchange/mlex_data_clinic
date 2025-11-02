@@ -36,7 +36,6 @@ TIMEZONE = os.getenv("TIMEZONE", "US/Pacific")
 FLOW_NAME = os.getenv("FLOW_NAME", "")
 PREFECT_TAGS = json.loads(os.getenv("PREFECT_TAGS", '["data-clinic"]'))
 WRITE_DIR = os.getenv("WRITE_DIR", "")
-FLOW_TYPE = os.getenv("FLOW_TYPE", "conda")
 
 logger = logging.getLogger(__name__)
 
@@ -137,14 +136,13 @@ def run_train(
 
         latent_space_params = latent_space_models[model_name]
         dim_reduction_params = dim_reduction_models[
-            dim_reduction_models.modelname_list[0]
+            "umap_v1.0.0"  # since there is no dim_reduction model seletion in UI, we use umap as default
         ]
         train_params = parse_train_job_params(
             data_project,
             model_parameters,
             USER,
             project_name,
-            FLOW_TYPE,
             latent_space_params,
             dim_reduction_params,
         )
@@ -321,7 +319,7 @@ def allow_show_reconstructions(job_id, n_intervals, project_name):
     ),
     prevent_initial_call=True,
 )
-def allow_show_stats(job_id, chjeck_job_n_intervals):
+def allow_show_stats(job_id, check_job_n_intervals):
     if job_id is not None:
         children_job_ids = get_children_flow_run_ids(job_id)
 
@@ -478,14 +476,13 @@ def run_inference(
         data_project = DataProject.from_dict(data_project_dict)
         latent_space_params = latent_space_models[model_name]
         dim_reduction_params = dim_reduction_models[
-            dim_reduction_models.modelname_list[0]
+            "umap_v1.0.0"  # since there is no dim_reduction model seletion in UI, we use umap as default
         ]
         inference_params = parse_inference_job_params(
             data_project,
             model_parameters,
             USER,
             project_name,
-            FLOW_TYPE,
             latent_space_params,
             dim_reduction_params,
         )
